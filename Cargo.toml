@@ -1,0 +1,11 @@
+[package]
+name = "md2md"
+description = "A Markdown to Markdown converter that supports basic Jinja2 templating. Perfect for documentation tasks."
+version = "0.1.0"
+edition = "2024"
+authors = ["Diego Coy (https://github.com/funnierinspanish)"]
+repository = "https://github.com/funnierinspanish/md2md"
+
+[dependencies]
+clap = { version = "4.5.37", features = ["derive"] }
+minijinja = { version = "2.9.0", features = ["loader"] }
