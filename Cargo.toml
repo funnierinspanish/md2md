@@ -1,11 +1,15 @@
 [package]
 name = "md2md"
-description = "A Markdown to Markdown converter that supports basic Jinja2 templating. Perfect for documentation tasks."
-version = "0.1.0"
+description = "A Markdown to Markdown processor with include directives and batch processing. Similar to markedpp but with enhanced path resolution."
+version = "0.2.0"
 edition = "2024"
 authors = ["Diego Coy (https://github.com/funnierinspanish)"]
 repository = "https://github.com/funnierinspanish/md2md"
 
 [dependencies]
+anstyle = "1.0.11"
 clap = { version = "4.5.37", features = ["derive"] }
-minijinja = { version = "2.9.0", features = ["loader"] }
+regex = "1.10"
+ratatui = "0.29.0"
+crossterm = "0.28.1"
+atty = "0.2"
