@@ -43,16 +43,16 @@ pub fn process_includes(
         
         for capture in include_regex.captures_iter(&result) {
             found_include = true;
-            let full_match = capture.get(0).unwrap();
-            let before_newlines = capture.get(1).unwrap().as_str();
-            let include_directive = capture.get(2).unwrap().as_str();
-            let after_newlines = capture.get(3).unwrap().as_str();
+            let full_match = capture.get(0).expect("Failed to get full regex match");
+            let before_newlines = capture.get(1).expect("Failed to get before newlines from regex match").as_str();
+            let include_directive = capture.get(2).expect("Failed to get include directive from regex match").as_str();
+            let after_newlines = capture.get(3).expect("Failed to get after newlines from regex match").as_str();
             
             // Extract the path from the include directive
             let path_regex = Regex::new(r"!include\s*\(([^)]+)\)")
                 .expect("Failed to compile path extraction regex");
             let include_path_str = if let Some(path_capture) = path_regex.captures(include_directive) {
-                path_capture.get(1).unwrap().as_str().trim()
+                path_capture.get(1).expect("Failed to get include path from regex capture").as_str().trim()
             } else {
                 // Track failed include with parse error
                 includes_tracker.push(IncludeResult {
@@ -139,4 +139,165 @@ pub fn process_includes(
     }
     
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_resolve_include_path_relative_to_partials() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let current_file = temp_dir.path().join("current.md");
+        let partials_path = temp_dir.path().join("partials");
+        
+        let resolved = resolve_include_path("header.md", &current_file, &partials_path)
+            .expect("Failed to resolve include path");
+        assert_eq!(resolved, partials_path.join("header.md"));
+    }
+
+    #[test]
+    fn test_resolve_include_path_relative_to_current() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let current_file = temp_dir.path().join("docs").join("current.md");
+        let partials_path = temp_dir.path().join("partials");
+        
+        let resolved = resolve_include_path("../header.md", &current_file, &partials_path)
+            .expect("Failed to resolve include path");
+        assert_eq!(resolved, temp_dir.path().join("docs").join("../header.md"));
+    }
+
+    #[test]
+    fn test_resolve_include_path_absolute() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let current_file = temp_dir.path().join("current.md");
+        let partials_path = temp_dir.path().join("partials");
+        let absolute_path = "/absolute/path/to/file.md";
+        
+        let resolved = resolve_include_path(absolute_path, &current_file, &partials_path)
+            .expect("Failed to resolve include path");
+        assert_eq!(resolved, PathBuf::from(absolute_path));
+    }
+
+    #[test]
+    fn test_process_includes_simple() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let partials_dir = temp_dir.path().join("partials");
+        fs::create_dir_all(&partials_dir).expect("Failed to create partials directory");
+        
+        // Create a partial file
+        let header_content = "# This is a header\n\nWelcome to the document.";
+        fs::write(partials_dir.join("header.md"), header_content).expect("Failed to write header.md");
+        
+        // Content with include directive
+        let content = "!include (header.md)\n\nThis is the main content.";
+        let current_file = temp_dir.path().join("main.md");
+        let mut includes = Vec::new();
+        
+        let result = process_includes(content, &current_file, &partials_dir, &mut includes)
+            .expect("Failed to process includes");
+        
+        // Should replace the include with the header content
+        let expected = format!("{}\n\nThis is the main content.", header_content);
+        assert_eq!(result, expected);
+        assert_eq!(includes.len(), 1);
+        assert!(includes[0].success);
+    }
+
+    #[test]
+    fn test_process_includes_missing_file() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let partials_dir = temp_dir.path().join("partials");
+        fs::create_dir_all(&partials_dir).expect("Failed to create partials directory");
+        
+        // Content with include directive to non-existent file
+        let content = "!include (missing.md)\n\nThis is the main content.";
+        let current_file = temp_dir.path().join("main.md");
+        let mut includes = Vec::new();
+        
+        let result = process_includes(content, &current_file, &partials_dir, &mut includes)
+            .expect("Failed to process includes");
+        
+        // Should replace with error comment
+        assert!(result.contains("<!-- Failed to include: missing.md"));
+        assert!(result.contains("This is the main content."));
+        assert_eq!(includes.len(), 1);
+        assert!(!includes[0].success);
+        assert!(includes[0].error_message.is_some());
+    }
+
+    #[test]
+    fn test_process_includes_nested() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let partials_dir = temp_dir.path().join("partials");
+        fs::create_dir_all(&partials_dir).expect("Failed to create partials directory");
+        
+        // Create nested partial files
+        let footer_content = "Thank you for reading!";
+        fs::write(partials_dir.join("footer.md"), footer_content).expect("Failed to write footer.md");
+        
+        let header_content = "# Welcome\n\n!include (footer.md)";
+        fs::write(partials_dir.join("header.md"), header_content).expect("Failed to write header.md");
+        
+        // Content with nested includes
+        let content = "!include (header.md)\n\nMain content here.";
+        let current_file = temp_dir.path().join("main.md");
+        let mut includes = Vec::new();
+        
+        let result = process_includes(content, &current_file, &partials_dir, &mut includes)
+            .expect("Failed to process includes");
+        
+        // Should process both includes
+        assert!(result.contains("# Welcome"));
+        assert!(result.contains("Thank you for reading!"));
+        assert!(result.contains("Main content here."));
+        assert_eq!(includes.len(), 2); // header.md and footer.md
+        assert!(includes.iter().all(|inc| inc.success));
+    }
+
+    #[test]
+    fn test_process_includes_with_spacing() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let partials_dir = temp_dir.path().join("partials");
+        fs::create_dir_all(&partials_dir).expect("Failed to create partials directory");
+        
+        // Create a partial file
+        let content_partial = "Inserted content";
+        fs::write(partials_dir.join("content.md"), content_partial).expect("Failed to write content.md");
+        
+        // Test spacing preservation
+        let content = "Before\n\n!include (content.md)\n\nAfter";
+        let current_file = temp_dir.path().join("main.md");
+        let mut includes = Vec::new();
+        
+        let result = process_includes(content, &current_file, &partials_dir, &mut includes)
+            .expect("Failed to process includes");
+        
+        assert_eq!(result, "Before\n\nInserted content\n\nAfter");
+        assert_eq!(includes.len(), 1);
+        assert!(includes[0].success);
+    }
+
+    #[test]
+    fn test_process_includes_empty_path() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let partials_dir = temp_dir.path().join("partials");
+        fs::create_dir_all(&partials_dir).expect("Failed to create partials directory");
+        
+        // Content with include directive that has a space (will fail when trimmed to empty)
+        let content = "!include ( )\n\nMain content.";
+        let current_file = temp_dir.path().join("main.md");
+        let mut includes = Vec::new();
+        
+        let result = process_includes(content, &current_file, &partials_dir, &mut includes)
+            .expect("Failed to process includes");
+        
+        // Should replace with error comment for file not found (empty path becomes empty file)
+        assert!(result.contains("<!-- Failed to include:"));
+        assert!(result.contains("Main content."));
+        assert_eq!(includes.len(), 1);
+        assert!(!includes[0].success);
+    }
 }

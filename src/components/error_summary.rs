@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let summary = app.summary.lock().unwrap();
+    let summary = app.summary.lock().expect("Failed to acquire summary lock for error summary rendering");
     
     // Collect all errors
     let file_errors: Vec<_> = summary.results

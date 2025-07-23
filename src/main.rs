@@ -337,7 +337,7 @@ fn run_tui_mode(
     std::thread::spawn(move || {
         let _ = md2md::processor::process_files(
             &processing_config,
-            &mut *processing_summary.lock().unwrap(),
+            &mut *processing_summary.lock().expect("Failed to acquire processing summary lock in background thread"),
             |_| {}, // No progress callback needed for TUI
         );
         
@@ -540,7 +540,7 @@ fn run_tui_mode(
                 
                 // Auto-switch to final tab if processing is complete
                 if app.is_processing_complete() && !app.has_switched_to_final_tab() {
-                    let summary_guard = summary.lock().unwrap();
+                    let summary_guard = summary.lock().expect("Failed to acquire summary lock for final tab switch");
                     let has_errors = summary_guard.results.iter().any(|r| !r.success) ||
                         summary_guard.results.iter().any(|r| r.includes.iter().any(|i| !i.success));
                     
@@ -575,7 +575,7 @@ fn run_console_mode(
 
     md2md::processor::process_files(
         &config,
-        &mut *summary.lock().unwrap(),
+        &mut *summary.lock().expect("Failed to acquire summary lock for console mode processing"),
         |summary| {
             if config.verbose {
                 if let Some(current) = &summary.current_file {
@@ -586,7 +586,7 @@ fn run_console_mode(
     ).expect("Failed to process files");
 
     // Print final summary
-    let summary_guard = summary.lock().unwrap();
+    let summary_guard = summary.lock().expect("Failed to acquire summary lock for final summary");
     cli_messages::print_console_summary(&summary_guard, config.verbose);
 
     Ok(())

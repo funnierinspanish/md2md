@@ -9,7 +9,7 @@ use ratatui::{
 use std::time::Duration;
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let summary = app.summary.lock().unwrap();
+    let summary = app.summary.lock().expect("Failed to acquire summary lock for summary rendering");
     
     let chunks = Layout::default()
         .direction(Direction::Vertical)

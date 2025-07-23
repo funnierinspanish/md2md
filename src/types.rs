@@ -87,3 +87,164 @@ pub struct ProcessingConfig {
     pub batch: bool,
     pub verbose: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_include_result_creation() {
+        let result = IncludeResult {
+            path: "test.md".to_string(),
+            success: true,
+            error_message: None,
+        };
+        
+        assert_eq!(result.path, "test.md");
+        assert!(result.success);
+        assert!(result.error_message.is_none());
+    }
+
+    #[test]
+    fn test_include_result_with_error() {
+        let result = IncludeResult {
+            path: "missing.md".to_string(),
+            success: false,
+            error_message: Some("File not found".to_string()),
+        };
+        
+        assert_eq!(result.path, "missing.md");
+        assert!(!result.success);
+        assert_eq!(result.error_message, Some("File not found".to_string()));
+    }
+
+    #[test]
+    fn test_file_process_result_success() {
+        let includes = vec![
+            IncludeResult {
+                path: "header.md".to_string(),
+                success: true,
+                error_message: None,
+            }
+        ];
+        
+        let result = FileProcessResult {
+            file_path: "test.md".to_string(),
+            success: true,
+            includes,
+            error_message: None,
+        };
+        
+        assert_eq!(result.file_path, "test.md");
+        assert!(result.success);
+        assert_eq!(result.includes.len(), 1);
+        assert!(result.error_message.is_none());
+    }
+
+    #[test]
+    fn test_processing_summary_new() {
+        let summary = ProcessingSummary::new();
+        
+        assert_eq!(summary.results.len(), 0);
+        assert_eq!(summary.total_files, 0);
+        assert_eq!(summary.processed_files, 0);
+        assert!(summary.current_file.is_none());
+    }
+
+    #[test]
+    fn test_processing_summary_operations() {
+        let mut summary = ProcessingSummary::new();
+        
+        summary.set_total_files(3);
+        assert_eq!(summary.total_files, 3);
+        
+        summary.set_current_file("test1.md".to_string());
+        assert_eq!(summary.current_file, Some("test1.md".to_string()));
+        
+        // Add successful result
+        let result1 = FileProcessResult {
+            file_path: "test1.md".to_string(),
+            success: true,
+            includes: vec![
+                IncludeResult {
+                    path: "header.md".to_string(),
+                    success: true,
+                    error_message: None,
+                }
+            ],
+            error_message: None,
+        };
+        summary.add_result(result1);
+        
+        // Add failed result
+        let result2 = FileProcessResult {
+            file_path: "test2.md".to_string(),
+            success: false,
+            includes: vec![
+                IncludeResult {
+                    path: "missing.md".to_string(),
+                    success: false,
+                    error_message: Some("File not found".to_string()),
+                }
+            ],
+            error_message: Some("Processing failed".to_string()),
+        };
+        summary.add_result(result2);
+        
+        assert_eq!(summary.processed_files, 2);
+        assert_eq!(summary.results.len(), 2);
+        assert_eq!(summary.get_success_count(), 1);
+        assert_eq!(summary.get_failed_count(), 1);
+        assert_eq!(summary.get_total_includes(), 2);
+        assert_eq!(summary.get_successful_includes(), 1);
+        assert_eq!(summary.get_failed_includes(), 1);
+        assert_eq!(summary.get_progress_percentage(), 66.66666666666666);
+    }
+
+    #[test]
+    fn test_processing_summary_empty_progress() {
+        let summary = ProcessingSummary::new();
+        assert_eq!(summary.get_progress_percentage(), 0.0);
+    }
+
+    #[test]
+    fn test_processing_summary_complete_progress() {
+        let mut summary = ProcessingSummary::new();
+        summary.set_total_files(2);
+        
+        let result1 = FileProcessResult {
+            file_path: "test1.md".to_string(),
+            success: true,
+            includes: vec![],
+            error_message: None,
+        };
+        summary.add_result(result1);
+        
+        let result2 = FileProcessResult {
+            file_path: "test2.md".to_string(),
+            success: true,
+            includes: vec![],
+            error_message: None,
+        };
+        summary.add_result(result2);
+        
+        assert_eq!(summary.get_progress_percentage(), 100.0);
+    }
+
+    #[test]
+    fn test_processing_config_creation() {
+        let config = ProcessingConfig {
+            source_path: PathBuf::from("/source"),
+            partials_path: PathBuf::from("/partials"),
+            output_path: PathBuf::from("/output"),
+            batch: true,
+            verbose: false,
+        };
+        
+        assert_eq!(config.source_path, PathBuf::from("/source"));
+        assert_eq!(config.partials_path, PathBuf::from("/partials"));
+        assert_eq!(config.output_path, PathBuf::from("/output"));
+        assert!(config.batch);
+        assert!(!config.verbose);
+    }
+}

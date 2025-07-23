@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let summary = app.summary.lock().unwrap();
+    let summary = app.summary.lock().expect("Failed to acquire summary lock for files rendering");
     
     if summary.results.is_empty() {
         let empty = Paragraph::new("No files processed yet...")
