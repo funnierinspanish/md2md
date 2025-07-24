@@ -1,1 +1,0 @@
-Common header content here

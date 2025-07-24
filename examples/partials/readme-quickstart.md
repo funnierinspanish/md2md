@@ -12,6 +12,9 @@ cargo build --release
 # Process a single file with partials
 md2md input.md -p partials -o output.md
 
+# Include code snippets with syntax highlighting
+# Use !codesnippet(file.rs, lang="rust") in your markdown
+
 # Batch process directory
 md2md src-docs -p partials -o output-docs --batch
 

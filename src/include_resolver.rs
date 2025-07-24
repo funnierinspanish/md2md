@@ -1,8 +1,72 @@
-use crate::types::{IncludeResult, IncludeParameters};
+use crate::types::{IncludeResult, IncludeParameters, CodeSnippetParameters};
 use regex::Regex;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+
+/// Check if a position in the text is inside a code fence or inline code
+fn is_inside_code_fence(content: &str, position: usize) -> bool {
+    let text_before = &content[..position];
+    
+    // Check for code fences (```)
+    let mut fence_count = 0;
+    let mut chars = text_before.chars().peekable();
+    let mut line_start = true;
+    
+    while let Some(ch) = chars.next() {
+        if line_start && ch == '`' {
+            // Check if this is a code fence (three or more backticks)
+            let mut backtick_count = 1;
+            while let Some(&'`') = chars.peek() {
+                chars.next();
+                backtick_count += 1;
+            }
+            
+            if backtick_count >= 3 {
+                fence_count += 1;
+            }
+        }
+        
+        line_start = ch == '\n';
+    }
+    
+    // If odd number of fences, we're inside a code block
+    if fence_count % 2 == 1 {
+        return true;
+    }
+    
+    // Check for inline code spans by looking at the immediate context
+    // Find the line containing this position
+    let mut line_start_pos = 0;
+    for (i, ch) in content[..position].char_indices().rev() {
+        if ch == '\n' {
+            line_start_pos = i + 1;
+            break;
+        }
+    }
+    
+    let mut line_end_pos = content.len();
+    for (i, ch) in content[position..].char_indices() {
+        if ch == '\n' {
+            line_end_pos = position + i;
+            break;
+        }
+    }
+    
+    let line = &content[line_start_pos..line_end_pos];
+    let pos_in_line = position - line_start_pos;
+    
+    // Count single backticks before our position in this line
+    let mut single_backtick_count = 0;
+    for ch in line[..pos_in_line].chars() {
+        if ch == '`' {
+            single_backtick_count += 1;
+        }
+    }
+    
+    // If odd number of single backticks, we're inside inline code
+    single_backtick_count % 2 == 1
+}
 
 pub fn resolve_include_path(
     include_path_str: &str,
@@ -28,18 +92,19 @@ pub fn resolve_include_path(
 
 pub fn parse_include_parameters(include_directive: &str) -> Result<(String, IncludeParameters), Box<dyn std::error::Error>> {
     // Match patterns like:
-    // !include (file.md)
+    // !include (file.md)  [old syntax with space]
+    // !include(file.md)   [new syntax without space]
     // !include (file.md, title="Title")
-    // !include (file.md, title="Title", title-level=2)
-    // !include (file.md, title="Title", title-level=2, values=[var1="val1", var2="val2"])
-    // !include (file.md, values=[var1="val1", var2="val2"])
+    // !include(file.md, title="Title", title-level=2)
+    // !include(file.md, title="Title", title-level=2, values=[var1="val1", var2="val2"])
+    // !include(file.md, values=[var1="val1", var2="val2"])
     
     let main_regex = Regex::new(r"!include\s*\(\s*([^,\s]+)(?:,\s*(.+))?\s*\)")
         .expect("Failed to compile main include regex");
     
     let captures = main_regex.captures(include_directive)
-        .ok_or("Invalid include directive format").expect("Failed to capture include directive");
-    
+        .ok_or(format!("Invalid include directive format '{}'", include_directive)).expect("Failed to capture include directive");
+
     let file_path = captures.get(1)
         .ok_or("Missing file path in include directive")
         .expect("Failed to get file path from include directive")
@@ -94,6 +159,109 @@ pub fn parse_include_parameters(include_directive: &str) -> Result<(String, Incl
     }
     
     Ok((file_path.to_string(), params))
+}
+
+pub fn parse_codesnippet_parameters(codesnippet_directive: &str) -> Result<(String, CodeSnippetParameters), Box<dyn std::error::Error>> {
+    // Match patterns like:
+    // !codesnippet (path/to/file.py)
+    // !codesnippet (path/to/file.py, lang="python")
+    // !codesnippet (path/to/file.py, lang="python", start=3)
+    // !codesnippet (path/to/file.py, lang="python", start=3, end=10)
+    
+    let main_regex = Regex::new(r"!codesnippet\s*\(\s*([^,)]+)(?:,\s*(.+))?\s*\)")
+        .expect("Failed to compile main codesnippet regex");
+    
+    let captures = main_regex.captures(codesnippet_directive)
+        .ok_or("Invalid codesnippet directive format")?;
+    
+    let file_path = captures.get(1)
+        .ok_or("Missing file path in codesnippet directive")?
+        .as_str()
+        .trim()
+        .trim_matches(|c| c == '"' || c == '\'');
+    
+    let mut params = CodeSnippetParameters::default();
+    
+    if let Some(params_str) = captures.get(2) {
+        let params_content = params_str.as_str();
+        
+        // Parse lang parameter
+        if let Ok(lang_regex) = Regex::new(r#"lang\s*=\s*"([^"]+)""#) {
+            if let Some(lang_capture) = lang_regex.captures(params_content) {
+                params.lang = Some(lang_capture.get(1).unwrap().as_str().to_string());
+            }
+        }
+        
+        // Parse start parameter
+        if let Ok(start_regex) = Regex::new(r"start\s*=\s*(\d+)") {
+            if let Some(start_capture) = start_regex.captures(params_content) {
+                let start = start_capture.get(1).unwrap().as_str().parse::<usize>()?;
+                if start > 0 {
+                    params.start = Some(start);
+                } else {
+                    return Err("start line must be greater than 0".into());
+                }
+            }
+        }
+        
+        // Parse end parameter
+        if let Ok(end_regex) = Regex::new(r"end\s*=\s*(\d+)") {
+            if let Some(end_capture) = end_regex.captures(params_content) {
+                let end = end_capture.get(1).unwrap().as_str().parse::<usize>()?;
+                if end > 0 {
+                    params.end = Some(end);
+                } else {
+                    return Err("end line must be greater than 0".into());
+                }
+            }
+        }
+    }
+    
+    Ok((file_path.to_string(), params))
+}
+
+pub fn process_code_snippet(
+    file_path: &Path,
+    current_file: &Path,
+    params: &CodeSnippetParameters,
+) -> Result<String, Box<dyn std::error::Error>> {
+    // Resolve path relative to current file's directory (not partials)
+    let resolved_path = if file_path.is_absolute() {
+        file_path.to_path_buf()
+    } else {
+        current_file.parent()
+            .ok_or("Cannot determine parent directory of current file")?
+            .join(file_path)
+    };
+    
+    // Read the file
+    let content = fs::read_to_string(&resolved_path)
+        .map_err(|e| format!("Failed to read code file '{}': {}", resolved_path.display(), e))?;
+    
+    let lines: Vec<&str> = content.lines().collect();
+    if lines.is_empty() {
+        return Ok(String::new());
+    }
+    
+    // Determine start and end lines (1-indexed in params, 0-indexed for array access)
+    let start_line = params.start.unwrap_or(1).saturating_sub(1);
+    let end_line = params.end.unwrap_or(lines.len()).min(lines.len());
+    
+    if start_line >= lines.len() {
+        return Err(format!("Start line {} is beyond the file length ({})", start_line + 1, lines.len()).into());
+    }
+    
+    if params.end.is_some() && end_line <= start_line {
+        return Err("End line must be greater than start line".into());
+    }
+    
+    // Extract the requested lines
+    let selected_lines = &lines[start_line..end_line];
+    let code_content = selected_lines.join("\n");
+    
+    // Format as markdown code block
+    let lang = params.lang.as_deref().unwrap_or("");
+    Ok(format!("```{}\n{}\n```", lang, code_content))
 }
 
 pub fn process_variables(content: &str, variables: &HashMap<String, String>) -> Result<String, Box<dyn std::error::Error>> {
@@ -177,9 +345,9 @@ fn process_includes_with_depth(
     if depth > MAX_DEPTH {
         return Err(format!("Maximum include depth ({}) exceeded. Possible circular includes.", MAX_DEPTH).into());
     }
-    // Match !include statements, handling multiline and nested brackets
-    let include_regex = Regex::new(r"(?s)(\n*?)(!include\s*\((?:[^()]*|\([^()]*\))*\))(\n*)")
-        .expect("Failed to compile include regex pattern");
+    // Match both !include and !codesnippet statements
+    let directive_regex = Regex::new(r"(?s)(\n*?)(!(include|codesnippet)\s*\((?:[^()]*|\([^()]*\))*\))(\n*)")
+        .expect("Failed to compile directive regex pattern");
     let mut result = content.to_string();
     
     // Keep processing until no more includes are found (for nested includes)
@@ -196,18 +364,31 @@ fn process_includes_with_depth(
         let mut new_result = String::new();
         let mut last_end = 0;
         
-        for capture in include_regex.captures_iter(&result) {
-            found_include = true;
+        for capture in directive_regex.captures_iter(&result) {
             let full_match = capture.get(0).expect("Failed to get full regex match");
             let before_newlines = capture.get(1).expect("Failed to get before newlines from regex match").as_str();
-            let include_directive = capture.get(2).expect("Failed to get include directive from regex match").as_str();
-            let after_newlines = capture.get(3).expect("Failed to get after newlines from regex match").as_str();
+            let directive = capture.get(2).expect("Failed to get directive from regex match").as_str();
+            let directive_type = capture.get(3).expect("Failed to get directive type from regex match").as_str();
+            let after_newlines = capture.get(4).expect("Failed to get after newlines from regex match").as_str();
             
-            // Add content before the include
+            // Check if this directive is inside a code fence
+            if is_inside_code_fence(&result, full_match.start()) {
+                // Skip processing this directive as it's inside a code block
+                // But still add the content up to this point
+                new_result.push_str(&result[last_end..full_match.end()]);
+                last_end = full_match.end();
+                continue;
+            }
+            
+            found_include = true;
+            
+            // Add content before the directive
             new_result.push_str(&result[last_end..full_match.start()]);
             
-            // Parse the include directive with parameters
-            match parse_include_parameters(include_directive) {
+            // Handle different directive types
+            if directive_type == "include" {
+                // Parse the include directive with parameters
+                match parse_include_parameters(directive) {
                 Ok((include_path_str, params)) => {
                     // Resolve the include path
                     let include_path = resolve_include_path(&include_path_str, current_file, partials_path)
@@ -294,15 +475,66 @@ fn process_includes_with_depth(
                 Err(e) => {
                     // Track failed include with parse error
                     includes_tracker.push(IncludeResult {
-                        path: include_directive.to_string(),
+                        path: directive.to_string(),
                         success: false,
                         error_message: Some(format!("Failed to parse include directive: {}", e)),
                     });
                     
                     // Add content before the include and keep the original directive as a comment
                     new_result.push_str(before_newlines);
-                    new_result.push_str(&format!("<!-- Failed to parse include directive: {} (Error: {}) -->", include_directive, e));
+                    new_result.push_str(&format!("<!-- Failed to parse include directive: {} (Error: {}) -->", directive, e));
                     new_result.push_str(after_newlines);
+                }
+                }
+            } else if directive_type == "codesnippet" {
+                // Handle codesnippet directive
+                match parse_codesnippet_parameters(directive) {
+                    Ok((file_path_str, params)) => {
+                        let file_path = PathBuf::from(&file_path_str);
+                        
+                        match process_code_snippet(&file_path, current_file, &params) {
+                            Ok(code_block) => {
+                                // Track successful codesnippet
+                                includes_tracker.push(IncludeResult {
+                                    path: file_path_str.clone(),
+                                    success: true,
+                                    error_message: None,
+                                });
+                                
+                                // Add the code block with preserved formatting
+                                new_result.push_str(before_newlines);
+                                new_result.push_str(&code_block);
+                                new_result.push_str(after_newlines);
+                            }
+                            Err(e) => {
+                                // Track failed codesnippet
+                                let error_msg = format!("{}", e);
+                                includes_tracker.push(IncludeResult {
+                                    path: file_path_str.clone(),
+                                    success: false,
+                                    error_message: Some(error_msg.clone()),
+                                });
+                                
+                                // Keep the original directive as a comment with preserved formatting
+                                new_result.push_str(before_newlines);
+                                new_result.push_str(&format!("<!-- Failed to process codesnippet: {} (Error: {}) -->", file_path_str, error_msg));
+                                new_result.push_str(after_newlines);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        // Track failed codesnippet with parse error
+                        includes_tracker.push(IncludeResult {
+                            path: directive.to_string(),
+                            success: false,
+                            error_message: Some(format!("Failed to parse codesnippet directive: {}", e)),
+                        });
+                        
+                        // Add content before the directive and keep the original directive as a comment
+                        new_result.push_str(before_newlines);
+                        new_result.push_str(&format!("<!-- Failed to parse codesnippet directive: {} (Error: {}) -->", directive, e));
+                        new_result.push_str(after_newlines);
+                    }
                 }
             }
             

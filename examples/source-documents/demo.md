@@ -1,9 +1,13 @@
 # Demo Document
 
-!include (demo-template.md, title="Getting Started", title-level=2, values=[project_name="md2md", feature_name="Enhanced include functionality", author="Foo Bar", internal_section_name="Key Features"])
+!include(header.md)
 
-## Next Steps
+## Getting Started
 
-!include (demo-template.md, values=[project_name="Your Project", feature_name="Custom variables", author="You"])
+!include(filename.md, values=[name="Demo Project"])
+
+## Footer
+
+!include(document-footer.md)
 
 That's it!
