@@ -1,10 +1,28 @@
 use std::path::PathBuf;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct IncludeResult {
     pub path: String,
     pub success: bool,
     pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct IncludeParameters {
+    pub title: Option<String>,
+    pub title_level: Option<u8>,
+    pub values: HashMap<String, String>,
+}
+
+impl Default for IncludeParameters {
+    fn default() -> Self {
+        Self {
+            title: None,
+            title_level: Some(1),
+            values: HashMap::new(),
+        }
+    }
 }
 
 #[derive(Debug)]

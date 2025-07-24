@@ -46,10 +46,45 @@ md2md src-docs -p partials -o output-docs --batch --ci --force
 
 Use the following syntax in your markdown files to include partials:
 
-```
-# Example Filename
+### Basic Include
 
-This is a generic example file.
+```markdown
+!include (partial-file.md)
+```
+
+### Include with Title
+
+Add an automatic title to the included content:
+
+```markdown
+!include (partial-file.md, title="Section Title")
+!include (partial-file.md, title="Section Title", title-level=2)
+```
+
+### Include with Variables
+
+Pass variables to be substituted in the included content:
+
+```markdown
+!include (partial-file.md, values=[variable_name="Value", another_var="Another Value"])
+```
+
+### Combined Usage
+
+```markdown
+!include (partial-file.md, title="Getting Started", title-level=2, values=[project_name="MyProject", author="John Doe"])
+```
+
+### Variable Syntax in Partials
+
+Within your partial files, use this syntax for variables:
+
+```markdown
+# Welcome to {% project_name %}!
+
+Created by: {% author %}
+
+Optional with default: {% optional_var || "default value" %}
 ```
 
 ### Path Resolution
