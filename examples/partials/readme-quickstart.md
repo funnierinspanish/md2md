@@ -2,7 +2,17 @@
 
 ### Installation
 
+#### Direct Install from GitHub (Recommended)
+
 ```bash
+cargo install --git https://github.com/funnierinspanish/md2md.git
+```
+
+#### From Source
+
+```bash
+git clone https://github.com/funnierinspanish/md2md.git
+cd md2md
 cargo build --release
 ```
 
