@@ -1,7 +1,7 @@
 [package]
 name = "md2md"
 description = "A Markdown to Markdown processor with include directives and batch processing. Similar to markedpp but with enhanced path resolution."
-version = "0.2.4"
+version = "0.3.0"
 edition = "2024"
 authors = ["Diego Coy (https://github.com/funnierinspanish)"]
 repository = "https://github.com/funnierinspanish/md2md"

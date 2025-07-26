@@ -104,7 +104,7 @@ fn is_inside_code_fence(content: &str, position: usize) -> bool {
     
     let mut fence_stack = Vec::new(); // Stack to track open fences (indent_level)
     
-    for line in lines {
+    for line in lines.iter() {
         let trimmed = line.trim_start();
         let indent_level = line.len() - trimmed.len();
         
@@ -113,27 +113,28 @@ fn is_inside_code_fence(content: &str, position: usize) -> bool {
             let fence_marker = trimmed.chars().take_while(|&c| c == '`').count();
             
             if fence_marker >= 3 {
-                let lang_part = &trimmed[fence_marker..].trim();
-                
                 if fence_stack.is_empty() {
-                    // This is an opening fence (we assume it has a language since validation passed)
+                    // This is an opening fence
                     fence_stack.push(indent_level);
                 } else {
                     // Check if this is a closing fence
                     let open_indent = fence_stack[fence_stack.len() - 1];
                     
-                    if indent_level == open_indent && lang_part.is_empty() {
-                        // This is a valid closing fence
+                    // A closing fence should have the same indentation
+                    if indent_level == open_indent {
                         fence_stack.pop();
+                    } else {
+                        // Ignored fence with wrong indentation
                     }
-                    // If it's not a valid closing fence, we ignore it (validation should have caught this)
                 }
             }
         }
     }
     
-    // If we have open fences, we're inside a code block
-    !fence_stack.is_empty() || is_inside_inline_code(content, position)
+    let inside_fence = !fence_stack.is_empty();
+    let inside_inline = is_inside_inline_code(content, position);
+    
+    inside_fence || inside_inline
 }
 
 /// Check if a position is inside inline code (single backticks)
@@ -159,10 +160,30 @@ fn is_inside_inline_code(content: &str, position: usize) -> bool {
     let pos_in_line = position - line_start_pos;
     
     // Count single backticks before our position in this line
+    // But ignore sequences of 3+ backticks (code fence markers)
     let mut single_backtick_count = 0;
-    for ch in line[..pos_in_line].chars() {
-        if ch == '`' {
-            single_backtick_count += 1;
+    let line_chars: Vec<char> = line[..pos_in_line].chars().collect();
+    let mut i = 0;
+    
+    while i < line_chars.len() {
+        if line_chars[i] == '`' {
+            // Count consecutive backticks starting at this position
+            let mut consecutive_backticks = 0;
+            let mut j = i;
+            while j < line_chars.len() && line_chars[j] == '`' {
+                consecutive_backticks += 1;
+                j += 1;
+            }
+            
+            // Only count as inline code if it's 1 or 2 backticks, not 3+
+            if consecutive_backticks < 3 {
+                single_backtick_count += consecutive_backticks;
+            }
+            
+            // Skip over all the backticks we just processed
+            i = j;
+        } else {
+            i += 1;
         }
     }
     
