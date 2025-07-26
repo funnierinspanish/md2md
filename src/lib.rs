@@ -62,6 +62,7 @@ mod integration_tests {
             output_path: output_dir.clone(),
             batch: true,
             verbose: false,
+            fix_code_fences: None,
         };
         
         let mut summary = ProcessingSummary::new();
@@ -114,6 +115,7 @@ mod integration_tests {
             output_path: output_file.clone(),
             batch: false,
             verbose: false,
+            fix_code_fences: None,
         };
         
         let mut summary = ProcessingSummary::new();

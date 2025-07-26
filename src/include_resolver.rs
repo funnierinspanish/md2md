@@ -4,38 +4,140 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
+/// Validates code fences in content and optionally fixes missing language definitions
+pub fn validate_and_fix_code_fences(content: &str, fix_missing_lang: Option<&str>) -> Result<String, Box<dyn std::error::Error>> {
+    let lines: Vec<&str> = content.lines().collect();
+    let mut result_lines = Vec::new();
+    let mut fence_stack = Vec::new(); // Stack to track open fences (line_number, indent_level, has_language)
+    
+    for (line_num, line) in lines.iter().enumerate() {
+        let trimmed = line.trim_start();
+        let indent_level = line.len() - trimmed.len();
+        
+        // Check if this line contains a code fence
+        if trimmed.starts_with("```") {
+            let fence_marker = trimmed.chars().take_while(|&c| c == '`').count();
+            
+            if fence_marker >= 3 {
+                // This is a code fence
+                let lang_part = &trimmed[fence_marker..].trim();
+                
+                if fence_stack.is_empty() {
+                    // This is an opening fence
+                    let has_language = !lang_part.is_empty();
+                    
+                    if !has_language {
+                        if let Some(default_lang) = fix_missing_lang {
+                            // Fix the missing language
+                            let fixed_line = format!("{}{}{}", 
+                                " ".repeat(indent_level), 
+                                "`".repeat(fence_marker), 
+                                default_lang
+                            );
+                            result_lines.push(fixed_line);
+                            fence_stack.push((line_num, indent_level, true));
+                        } else {
+                            return Err(format!(
+                                "Code fence at line {} does not specify a language. Use --fix-code-fences to automatically fix this.",
+                                line_num + 1
+                            ).into());
+                        }
+                    } else {
+                        // Opening fence with language is valid
+                        result_lines.push(line.to_string());
+                        fence_stack.push((line_num, indent_level, true));
+                    }
+                } else {
+                    // This might be a closing fence
+                    let (open_line, open_indent, _) = fence_stack[fence_stack.len() - 1];
+                    
+                    if indent_level == open_indent && lang_part.is_empty() {
+                        // This is a valid closing fence
+                        fence_stack.pop();
+                        result_lines.push(line.to_string());
+                    } else if indent_level != open_indent {
+                        return Err(format!(
+                            "Code fence closing at line {} has different indentation than opening fence at line {}. Opening: {} spaces, Closing: {} spaces.",
+                            line_num + 1, open_line + 1, open_indent, indent_level
+                        ).into());
+                    } else if !lang_part.is_empty() {
+                        // This looks like a new opening fence while another is still open
+                        return Err(format!(
+                            "Found new code fence opening at line {} while previous fence from line {} is still open.",
+                            line_num + 1, open_line + 1
+                        ).into());
+                    } else {
+                        result_lines.push(line.to_string());
+                    }
+                }
+            } else {
+                result_lines.push(line.to_string());
+            }
+        } else {
+            result_lines.push(line.to_string());
+        }
+    }
+    
+    // Check if any fences are still open
+    if !fence_stack.is_empty() {
+        let (open_line, _, _) = fence_stack[0];
+        return Err(format!(
+            "Code fence opened at line {} was never closed.",
+            open_line + 1
+        ).into());
+    }
+    
+    // Preserve the original ending (newline or no newline)
+    let mut result = result_lines.join("\n");
+    if content.ends_with('\n') && !result.ends_with('\n') {
+        result.push('\n');
+    }
+    
+    Ok(result)
+}
+
 /// Check if a position in the text is inside a code fence or inline code
+/// This function now requires valid code fences (validated by validate_and_fix_code_fences)
 fn is_inside_code_fence(content: &str, position: usize) -> bool {
     let text_before = &content[..position];
+    let lines: Vec<&str> = text_before.lines().collect();
     
-    // Check for code fences (```)
-    let mut fence_count = 0;
-    let mut chars = text_before.chars().peekable();
-    let mut line_start = true;
+    let mut fence_stack = Vec::new(); // Stack to track open fences (indent_level)
     
-    while let Some(ch) = chars.next() {
-        if line_start && ch == '`' {
-            // Check if this is a code fence (three or more backticks)
-            let mut backtick_count = 1;
-            while let Some(&'`') = chars.peek() {
-                chars.next();
-                backtick_count += 1;
-            }
+    for line in lines {
+        let trimmed = line.trim_start();
+        let indent_level = line.len() - trimmed.len();
+        
+        // Check if this line contains a code fence
+        if trimmed.starts_with("```") {
+            let fence_marker = trimmed.chars().take_while(|&c| c == '`').count();
             
-            if backtick_count >= 3 {
-                fence_count += 1;
+            if fence_marker >= 3 {
+                let lang_part = &trimmed[fence_marker..].trim();
+                
+                if fence_stack.is_empty() {
+                    // This is an opening fence (we assume it has a language since validation passed)
+                    fence_stack.push(indent_level);
+                } else {
+                    // Check if this is a closing fence
+                    let open_indent = fence_stack[fence_stack.len() - 1];
+                    
+                    if indent_level == open_indent && lang_part.is_empty() {
+                        // This is a valid closing fence
+                        fence_stack.pop();
+                    }
+                    // If it's not a valid closing fence, we ignore it (validation should have caught this)
+                }
             }
         }
-        
-        line_start = ch == '\n';
     }
     
-    // If odd number of fences, we're inside a code block
-    if fence_count % 2 == 1 {
-        return true;
-    }
-    
-    // Check for inline code spans by looking at the immediate context
+    // If we have open fences, we're inside a code block
+    !fence_stack.is_empty() || is_inside_inline_code(content, position)
+}
+
+/// Check if a position is inside inline code (single backticks)
+fn is_inside_inline_code(content: &str, position: usize) -> bool {
     // Find the line containing this position
     let mut line_start_pos = 0;
     for (i, ch) in content[..position].char_indices().rev() {
@@ -330,7 +432,19 @@ pub fn process_includes(
     partials_path: &Path,
     includes_tracker: &mut Vec<IncludeResult>,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    process_includes_with_depth(content, current_file, partials_path, includes_tracker, 0)
+    process_includes_with_depth(content, current_file, partials_path, includes_tracker, 0, None)
+}
+
+pub fn process_includes_with_validation(
+    content: &str,
+    current_file: &Path,
+    partials_path: &Path,
+    includes_tracker: &mut Vec<IncludeResult>,
+    fix_code_fences: Option<&str>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    // First validate and optionally fix code fences
+    let validated_content = validate_and_fix_code_fences(content, fix_code_fences)?;
+    process_includes_with_depth(&validated_content, current_file, partials_path, includes_tracker, 0, fix_code_fences)
 }
 
 fn process_includes_with_depth(
@@ -339,6 +453,7 @@ fn process_includes_with_depth(
     partials_path: &Path,
     includes_tracker: &mut Vec<IncludeResult>,
     depth: usize,
+    fix_code_fences: Option<&str>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     const MAX_DEPTH: usize = 10; // Prevent infinite recursion
     
@@ -441,6 +556,7 @@ fn process_includes_with_depth(
                                 partials_path,
                                 &mut nested_includes,
                                 depth + 1,
+                                fix_code_fences,
                             ).expect("Failed to process nested includes");
                             
                             // Add nested includes to the main tracker
@@ -449,9 +565,8 @@ fn process_includes_with_depth(
                             // Preserve the exact spacing around the include
                             new_result.push_str(before_newlines);
                             
-                            // Remove trailing whitespace but preserve the content structure
-                            let trimmed_content = processed_included.trim_end();
-                            new_result.push_str(trimmed_content);
+                            // Add the processed content exactly as-is to preserve document structure
+                            new_result.push_str(&processed_included);
                             
                             // Add the preserved after newlines
                             new_result.push_str(after_newlines);
@@ -748,6 +863,132 @@ Main content continues here."#;
         assert!(result.contains("### Section Title"));
         assert!(result.contains("This is the included content."));
         assert!(result.contains("Main content continues here."));
+        assert_eq!(includes.len(), 1);
+        assert!(includes[0].success);
+    }
+
+    #[test]
+    fn test_validate_and_fix_code_fences_valid() {
+        let content = r#"# Test
+
+```rust
+fn main() {
+    println!("Hello");
+}
+```
+
+End of test."#;
+        
+        let result = validate_and_fix_code_fences(content, None)
+            .expect("Valid code fences should not fail");
+        
+        assert_eq!(result, content); // Should be unchanged
+    }
+
+    #[test]
+    fn test_validate_and_fix_code_fences_missing_language_fails() {
+        let content = r#"# Test
+
+```
+fn main() {
+    println!("Hello");
+}
+```
+
+End of test."#;
+        
+        let result = validate_and_fix_code_fences(content, None);
+        assert!(result.is_err());
+        assert!(result.err().unwrap().to_string().contains("does not specify a language"));
+    }
+
+    #[test]
+    fn test_validate_and_fix_code_fences_missing_language_fixed() {
+        let content = r#"# Test
+
+```
+fn main() {
+    println!("Hello");
+}
+```
+
+End of test."#;
+        
+        let result = validate_and_fix_code_fences(content, Some("rust"))
+            .expect("Should fix missing language");
+        
+        assert!(result.contains("```rust"));
+        assert!(!result.contains("```\nfn main"));
+    }
+
+    #[test]
+    fn test_validate_and_fix_code_fences_mismatched_indent() {
+        let content = r#"# Test
+
+```rust
+    some code
+  ```
+
+End of test."#;
+        
+        let result = validate_and_fix_code_fences(content, None);
+        assert!(result.is_err());
+        assert!(result.err().unwrap().to_string().contains("different indentation"));
+    }
+
+    #[test]
+    fn test_validate_and_fix_code_fences_unclosed() {
+        let content = r#"# Test
+
+```rust
+fn main() {
+    println!("Hello");
+}
+
+End of test."#;
+        
+        let result = validate_and_fix_code_fences(content, None);
+        assert!(result.is_err());
+        assert!(result.err().unwrap().to_string().contains("was never closed"));
+    }
+
+    #[test]
+    fn test_validate_and_fix_code_fences_nested_opening() {
+        let content = r#"# Test
+
+```rust
+some code
+
+```python
+more code
+```"#;
+        
+        let result = validate_and_fix_code_fences(content, None);
+        assert!(result.is_err());
+        assert!(result.err().unwrap().to_string().contains("new code fence opening"));
+    }
+
+    #[test]
+    fn test_preserve_trailing_whitespace_in_includes() {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let partials_dir = temp_dir.path().join("partials");
+        fs::create_dir_all(&partials_dir).expect("Failed to create partials directory");
+        
+        // Create a partial file with trailing empty lines
+        let content_with_trailing = "Content with trailing lines.\n\n";
+        fs::write(partials_dir.join("trailing.md"), content_with_trailing).expect("Failed to write trailing.md");
+        
+        // Content with include directive
+        let content = "# Main\n\n!include (trailing.md)\n\nEnd.";
+        let current_file = temp_dir.path().join("main.md");
+        let mut includes = Vec::new();
+        
+        let result = process_includes(content, &current_file, &partials_dir, &mut includes)
+            .expect("Failed to process includes");
+        
+        // Should preserve trailing empty lines from the included content
+        assert!(result.contains("Content with trailing lines.\n\n"));
+        assert!(result.contains("End."));
         assert_eq!(includes.len(), 1);
         assert!(includes[0].success);
     }

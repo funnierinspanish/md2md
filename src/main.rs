@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, crate_version};
 use md2md::{
     types::{ProcessingSummary, ProcessingConfig},
     app::App,
@@ -11,8 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::io::Write;
 
 #[derive(Parser)]
-#[command(name = "md2md")]
-#[command(version = "0.2.0")]
+#[clap(name = "app_name", version = crate_version!())]
 #[command(about = "Markdown to Markdown processor with include directives and batch processing", long_about = "
 A powerful Markdown processor that supports include directives similar to markedpp.
 
@@ -35,6 +34,9 @@ EXAMPLES:
 
   # Batch process directory (maintains structure)
   md2md src-dir -p partials -o output-dir --batch
+
+  # Fix code fences without language definitions
+  md2md input.md -p partials -o output.md --fix-code-fences=rust
 
   # Verbose output
   md2md src-dir -p partials --batch --verbose
@@ -67,6 +69,10 @@ struct Cli {
     /// Force overwrite existing files and create directories without prompting
     #[arg(short = 'f', long = "force", action)]
     force: bool,
+
+    /// Fix code fences that don't specify a language by adding a default language
+    #[arg(long = "fix-code-fences", value_name = "LANGUAGE", default_value = "text")]
+    fix_code_fences: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -109,6 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         output_path: final_output_path,
         batch: cli.batch || source_path.is_dir(),
         verbose: cli.verbose,
+        fix_code_fences: cli.fix_code_fences,
     };
 
     let summary = Arc::new(Mutex::new(ProcessingSummary::new()));

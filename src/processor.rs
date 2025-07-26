@@ -1,5 +1,5 @@
 use crate::file_handler::{collect_markdown_files, write_file};
-use crate::include_resolver::process_includes;
+use crate::include_resolver::process_includes_with_validation;
 use crate::types::{FileProcessResult, ProcessingSummary, ProcessingConfig};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,7 +25,7 @@ pub fn process_files(
         summary.set_current_file(file_path.to_string_lossy().to_string());
         progress_callback(summary);
         
-        let result = process_single_file(&file_path, &config.partials_path, &output_path)
+        let result = process_single_file(&file_path, &config.partials_path, &output_path, config.fix_code_fences.as_deref())
             .expect("Failed to process single file");
         summary.add_result(result);
         
@@ -39,12 +39,13 @@ fn process_single_file(
     source_file: &Path,
     partials_path: &Path,
     output_file: &Path,
+    fix_code_fences: Option<&str>,
 ) -> Result<FileProcessResult, Box<dyn std::error::Error>> {
     let content = fs::read_to_string(source_file)
         .expect("Failed to read source file content");
     let mut includes_tracker = Vec::new();
     
-    match process_includes(&content, source_file, partials_path, &mut includes_tracker) {
+    match process_includes_with_validation(&content, source_file, partials_path, &mut includes_tracker, fix_code_fences) {
         Ok(processed_content) => {
             match write_file(output_file, &processed_content) {
                 Ok(_) => {
@@ -135,7 +136,7 @@ mod tests {
         // Create output path
         let output_file = temp_dir.path().join("output.md");
         
-        let result = process_single_file(&source_file, &partials_dir, &output_file)
+        let result = process_single_file(&source_file, &partials_dir, &output_file, None)
             .expect("Failed to process single file");
         
         assert!(result.success);
@@ -163,7 +164,7 @@ mod tests {
         // Create output path
         let output_file = temp_dir.path().join("output.md");
         
-        let result = process_single_file(&source_file, &partials_dir, &output_file)
+        let result = process_single_file(&source_file, &partials_dir, &output_file, None)
             .expect("Failed to process single file");
         
         assert!(result.success);
@@ -188,7 +189,7 @@ mod tests {
         // Create output path
         let output_file = temp_dir.path().join("output.md");
         
-        let result = process_single_file(&source_file, &partials_dir, &output_file)
+        let result = process_single_file(&source_file, &partials_dir, &output_file, None)
             .expect("Failed to process single file");
         
         assert!(!result.success); // Should fail due to missing include
@@ -223,6 +224,7 @@ mod tests {
             output_path: output_file.clone(),
             batch: false,
             verbose: false,
+            fix_code_fences: None,
         };
         
         let mut summary = ProcessingSummary::new();
@@ -261,6 +263,7 @@ mod tests {
             output_path: output_dir.clone(),
             batch: true,
             verbose: false,
+            fix_code_fences: None,
         };
         
         let mut summary = ProcessingSummary::new();

@@ -121,6 +121,7 @@ pub struct ProcessingConfig {
     pub output_path: PathBuf,
     pub batch: bool,
     pub verbose: bool,
+    pub fix_code_fences: Option<String>,
 }
 
 #[cfg(test)]
@@ -274,6 +275,7 @@ mod tests {
             output_path: PathBuf::from("/output"),
             batch: true,
             verbose: false,
+            fix_code_fences: Some("text".to_string()),
         };
         
         assert_eq!(config.source_path, PathBuf::from("/source"));
@@ -281,5 +283,6 @@ mod tests {
         assert_eq!(config.output_path, PathBuf::from("/output"));
         assert!(config.batch);
         assert!(!config.verbose);
+        assert_eq!(config.fix_code_fences, Some("text".to_string()));
     }
 }
