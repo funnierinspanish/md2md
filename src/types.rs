@@ -25,14 +25,12 @@ impl Default for IncludeParameters {
     }
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct CodeSnippetParameters {
     pub lang: Option<String>,
     pub start: Option<usize>,
     pub end: Option<usize>,
 }
-
 
 #[derive(Debug)]
 pub struct FileProcessResult {

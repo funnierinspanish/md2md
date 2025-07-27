@@ -111,9 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         validate_directory_output(output_path, cli.ci, cli.force)
             .expect("Failed to validate directory output path")
     } else {
-        eprintln!(
-            "Error: Input path is neither a file nor a directory: {source_path:?}"
-        );
+        eprintln!("Error: Input path is neither a file nor a directory: {source_path:?}");
         std::process::exit(1);
     };
 
@@ -193,9 +191,7 @@ fn validate_directory_output(
             std::process::exit(1);
         } else {
             // Interactive mode: ask user
-            print!(
-                "Output directory {output_path:?} doesn't exist. Create it? (y/N): "
-            );
+            print!("Output directory {output_path:?} doesn't exist. Create it? (y/N): ");
             std::io::stdout().flush().expect("Failed to flush stdout");
 
             let mut input = String::new();
@@ -247,9 +243,7 @@ fn handle_file_output_logic(
                 std::process::exit(1);
             } else {
                 // Interactive mode: ask user
-                print!(
-                    "Output directory {output_path:?} doesn't exist. Create it? (y/N): "
-                );
+                print!("Output directory {output_path:?} doesn't exist. Create it? (y/N): ");
                 std::io::stdout().flush().expect("Failed to flush stdout");
 
                 let mut input = String::new();
@@ -283,9 +277,7 @@ fn handle_file_output_logic(
                 std::process::exit(1);
             } else {
                 // Interactive mode: ask for overwrite permission
-                print!(
-                    "Output file {output_path:?} already exists. Overwrite? (y/N): "
-                );
+                print!("Output file {output_path:?} already exists. Overwrite? (y/N): ");
                 std::io::stdout().flush().expect("Failed to flush stdout");
 
                 let mut input = String::new();
@@ -317,9 +309,7 @@ fn handle_file_output_logic(
                         std::process::exit(1);
                     } else {
                         // Interactive mode: ask user
-                        print!(
-                            "Output directory {parent:?} doesn't exist. Create it? (y/N): "
-                        );
+                        print!("Output directory {parent:?} doesn't exist. Create it? (y/N): ");
                         std::io::stdout().flush().expect("Failed to flush stdout");
 
                         let mut input = String::new();

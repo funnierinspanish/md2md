@@ -545,7 +545,7 @@ fn process_includes_with_depth(
     fix_code_fences: Option<&str>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     const MAX_DEPTH: usize = 5;
-    
+
     let fix_code_fences_with_lang = fix_code_fences.map(|lang| lang.to_string());
 
     if depth > MAX_DEPTH {
@@ -708,9 +708,7 @@ fn process_includes_with_depth(
                         includes_tracker.push(IncludeResult {
                             path: directive.to_string(),
                             success: false,
-                            error_message: Some(format!(
-                                "Failed to parse include directive: {e}"
-                            )),
+                            error_message: Some(format!("Failed to parse include directive: {e}")),
                         });
 
                         // Add content before the include and keep the original directive as a comment
