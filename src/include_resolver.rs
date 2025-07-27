@@ -544,7 +544,9 @@ fn process_includes_with_depth(
     depth: usize,
     fix_code_fences: Option<&str>,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    const MAX_DEPTH: usize = 10; // Prevent infinite recursion
+    const MAX_DEPTH: usize = 5;
+    
+    let fix_code_fences_with_lang = fix_code_fences.map(|lang| lang.to_string());
 
     if depth > MAX_DEPTH {
         return Err(format!(
@@ -667,7 +669,7 @@ fn process_includes_with_depth(
                                     partials_path,
                                     &mut nested_includes,
                                     depth + 1,
-                                    fix_code_fences,
+                                    fix_code_fences_with_lang.as_deref(),
                                 )
                                 .expect("Failed to process nested includes");
 

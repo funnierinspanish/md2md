@@ -57,9 +57,6 @@ pub fn print_console_summary(summary: &ProcessingSummary, verbose: bool) {
             println!("\nAll operations completed successfully! 🎉");
         }
     } else {
-        // Simple summary for non-verbose mode
-        let success_count = success_count;
-        let failed_count = failed_count;
         println!(
             "Processed {} files: {} succeeded, {} failed.",
             summary.results.len(),
