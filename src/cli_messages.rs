@@ -11,7 +11,7 @@ pub fn print_console_summary(summary: &ProcessingSummary, verbose: bool) {
             println!("{} File: {}", status_icon, result.file_path);
 
             if let Some(error) = &result.error_message {
-                println!("  Error: {}", error);
+                println!("  Error: {error}");
                 continue;
             }
 
@@ -25,7 +25,7 @@ pub fn print_console_summary(summary: &ProcessingSummary, verbose: bool) {
                     println!("    {} {}: {}", include_icon, status_text, include.path);
 
                     if let Some(error) = &include.error_message {
-                        println!("      └─ {}", error);
+                        println!("      └─ {error}");
                     }
                 }
             }

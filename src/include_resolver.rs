@@ -236,8 +236,7 @@ pub fn parse_include_parameters(
     let captures = main_regex
         .captures(include_directive)
         .ok_or(format!(
-            "Invalid include directive format '{}'",
-            include_directive
+            "Invalid include directive format '{include_directive}'"
         ))
         .expect("Failed to capture include directive");
 
@@ -276,7 +275,7 @@ pub fn parse_include_parameters(
                     .as_str()
                     .parse::<u8>()
                     .expect("Failed to parse title-level");
-                if level >= 1 && level <= 6 {
+                if (1..=6).contains(&level) {
                     params.title_level = Some(level);
                 } else {
                     return Err("title-level must be between 1 and 6".into());
@@ -431,7 +430,7 @@ pub fn process_code_snippet(
 
     // Format as markdown code block
     let lang = params.lang.as_deref().unwrap_or("");
-    Ok(format!("```{}\n{}\n```", lang, code_content))
+    Ok(format!("```{lang}\n{code_content}\n```"))
 }
 
 pub fn process_variables(
@@ -477,8 +476,7 @@ pub fn process_variables(
                 new_result.push_str(default);
             } else {
                 return Err(format!(
-                    "Variable '{}' not found and no default value provided",
-                    var_name
+                    "Variable '{var_name}' not found and no default value provided"
                 )
                 .into());
             }
@@ -500,7 +498,7 @@ pub fn process_variables(
 
 pub fn add_title_to_content(content: &str, title: &str, level: u8) -> String {
     let title_prefix = "#".repeat(level as usize);
-    format!("{} {}\n\n{}", title_prefix, title, content)
+    format!("{title_prefix} {title}\n\n{content}")
 }
 
 pub fn process_includes(
@@ -550,8 +548,7 @@ fn process_includes_with_depth(
 
     if depth > MAX_DEPTH {
         return Err(format!(
-            "Maximum include depth ({}) exceeded. Possible circular includes.",
-            MAX_DEPTH
+            "Maximum include depth ({MAX_DEPTH}) exceeded. Possible circular includes."
         )
         .into());
     }
@@ -640,14 +637,13 @@ fn process_includes_with_depth(
                                                 path: include_path.to_string_lossy().to_string(),
                                                 success: false,
                                                 error_message: Some(format!(
-                                                    "Variable processing failed: {}",
-                                                    e
+                                                    "Variable processing failed: {e}"
                                                 )),
                                             });
 
                                             // Keep the original include directive as a comment
                                             new_result.push_str(before_newlines);
-                                            new_result.push_str(&format!("<!-- Failed to process variables in include: {} (Error: {}) -->", include_path_str, e));
+                                            new_result.push_str(&format!("<!-- Failed to process variables in include: {include_path_str} (Error: {e}) -->"));
                                             new_result.push_str(after_newlines);
 
                                             last_end = full_match.end();
@@ -689,7 +685,7 @@ fn process_includes_with_depth(
                             }
                             Err(e) => {
                                 // Track failed include
-                                let error_msg = format!("{}", e);
+                                let error_msg = format!("{e}");
                                 includes_tracker.push(IncludeResult {
                                     path: include_path.to_string_lossy().to_string(),
                                     success: false,
@@ -699,8 +695,7 @@ fn process_includes_with_depth(
                                 // Keep the original include directive as a comment with preserved formatting
                                 new_result.push_str(before_newlines);
                                 new_result.push_str(&format!(
-                                    "<!-- Failed to include: {} (Error: {}) -->",
-                                    include_path_str, error_msg
+                                    "<!-- Failed to include: {include_path_str} (Error: {error_msg}) -->"
                                 ));
                                 new_result.push_str(after_newlines);
                             }
@@ -712,16 +707,14 @@ fn process_includes_with_depth(
                             path: directive.to_string(),
                             success: false,
                             error_message: Some(format!(
-                                "Failed to parse include directive: {}",
-                                e
+                                "Failed to parse include directive: {e}"
                             )),
                         });
 
                         // Add content before the include and keep the original directive as a comment
                         new_result.push_str(before_newlines);
                         new_result.push_str(&format!(
-                            "<!-- Failed to parse include directive: {} (Error: {}) -->",
-                            directive, e
+                            "<!-- Failed to parse include directive: {directive} (Error: {e}) -->"
                         ));
                         new_result.push_str(after_newlines);
                     }
@@ -748,7 +741,7 @@ fn process_includes_with_depth(
                             }
                             Err(e) => {
                                 // Track failed codesnippet
-                                let error_msg = format!("{}", e);
+                                let error_msg = format!("{e}");
                                 includes_tracker.push(IncludeResult {
                                     path: file_path_str.clone(),
                                     success: false,
@@ -758,8 +751,7 @@ fn process_includes_with_depth(
                                 // Keep the original directive as a comment with preserved formatting
                                 new_result.push_str(before_newlines);
                                 new_result.push_str(&format!(
-                                    "<!-- Failed to process codesnippet: {} (Error: {}) -->",
-                                    file_path_str, error_msg
+                                    "<!-- Failed to process codesnippet: {file_path_str} (Error: {error_msg}) -->"
                                 ));
                                 new_result.push_str(after_newlines);
                             }
@@ -771,16 +763,14 @@ fn process_includes_with_depth(
                             path: directive.to_string(),
                             success: false,
                             error_message: Some(format!(
-                                "Failed to parse codesnippet directive: {}",
-                                e
+                                "Failed to parse codesnippet directive: {e}"
                             )),
                         });
 
                         // Add content before the directive and keep the original directive as a comment
                         new_result.push_str(before_newlines);
                         new_result.push_str(&format!(
-                            "<!-- Failed to parse codesnippet directive: {} (Error: {}) -->",
-                            directive, e
+                            "<!-- Failed to parse codesnippet directive: {directive} (Error: {e}) -->"
                         ));
                         new_result.push_str(after_newlines);
                     }
@@ -945,8 +935,7 @@ mod tests {
         assert!(result.is_err());
         assert!(
             result
-                .err()
-                .expect("Failed to get error :/")
+                .expect_err("Failed to get error :/")
                 .to_string()
                 .contains("Variable 'name' not found")
         );

@@ -131,7 +131,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         content.push(Line::from(vec![
             Span::raw("Avg time per file: "),
             Span::styled(
-                format!("{:.2}ms", avg_time_per_file),
+                format!("{avg_time_per_file:.2}ms"),
                 Style::default().fg(Color::Cyan),
             ),
         ]));
@@ -141,7 +141,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             content.push(Line::from(vec![
                 Span::raw("Avg time per include: "),
                 Span::styled(
-                    format!("{:.2}ms", avg_time_per_include),
+                    format!("{avg_time_per_include:.2}ms"),
                     Style::default().fg(Color::Cyan),
                 ),
             ]));
@@ -172,7 +172,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             };
 
             let mut spans = vec![
-                Span::styled(format!("{} ", icon), style),
+                Span::styled(format!("{icon} "), style),
                 Span::raw(&result.file_path),
             ];
 
@@ -215,10 +215,10 @@ fn format_duration(duration: Duration) -> String {
     let millis = duration.subsec_millis();
 
     if minutes > 0 {
-        format!("{}m {}s", minutes, seconds)
+        format!("{minutes}m {seconds}s")
     } else if seconds > 0 {
-        format!("{}.{:03}s", seconds, millis)
+        format!("{seconds}.{millis:03}s")
     } else {
-        format!("{}ms", millis)
+        format!("{millis}ms")
     }
 }

@@ -26,21 +26,13 @@ impl Default for IncludeParameters {
 }
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct CodeSnippetParameters {
     pub lang: Option<String>,
     pub start: Option<usize>,
     pub end: Option<usize>,
 }
 
-impl Default for CodeSnippetParameters {
-    fn default() -> Self {
-        Self {
-            lang: None,
-            start: None,
-            end: None,
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct FileProcessResult {
@@ -56,6 +48,12 @@ pub struct ProcessingSummary {
     pub total_files: usize,
     pub processed_files: usize,
     pub current_file: Option<String>,
+}
+
+impl Default for ProcessingSummary {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ProcessingSummary {

@@ -41,7 +41,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
 
     // Current file
     let current_file = summary.current_file.as_deref().unwrap_or("None");
-    let current_info = Paragraph::new(format!("Current file: {}", current_file))
+    let current_info = Paragraph::new(format!("Current file: {current_file}"))
         .block(Block::default().borders(Borders::ALL).title("Processing"));
     f.render_widget(current_info, chunks[1]);
 

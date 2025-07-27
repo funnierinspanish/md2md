@@ -92,7 +92,7 @@ fn process_single_file(
                     file_path: source_file.to_string_lossy().to_string(),
                     success: false,
                     includes: includes_tracker.clone(),
-                    error_message: Some(format!("Failed to write output: {}", e)),
+                    error_message: Some(format!("Failed to write output: {e}")),
                 }),
             }
         }
@@ -100,7 +100,7 @@ fn process_single_file(
             file_path: source_file.to_string_lossy().to_string(),
             success: false,
             includes: includes_tracker,
-            error_message: Some(format!("Failed to process includes: {}", e)),
+            error_message: Some(format!("Failed to process includes: {e}")),
         }),
     }
 }

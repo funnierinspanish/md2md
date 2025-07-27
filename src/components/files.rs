@@ -101,7 +101,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 let mut line_spans = vec![
                     Span::raw("  "),
                     Span::styled(
-                        format!("{} ", status),
+                        format!("{status} "),
                         if include.success {
                             Style::default().fg(Color::Green)
                         } else {

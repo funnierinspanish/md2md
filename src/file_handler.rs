@@ -7,7 +7,7 @@ pub fn collect_markdown_files(
     let mut files = Vec::new();
 
     if source_path.is_file() {
-        if source_path.extension().map_or(false, |ext| ext == "md") {
+        if source_path.extension().is_some_and(|ext| ext == "md") {
             files.push(source_path.to_path_buf());
         }
     } else if source_path.is_dir() {
@@ -29,7 +29,7 @@ fn collect_files_recursive(
         if path.is_dir() {
             collect_files_recursive(&path, files)
                 .expect("Failed to collect files from subdirectory");
-        } else if path.extension().map_or(false, |ext| ext == "md") {
+        } else if path.extension().is_some_and(|ext| ext == "md") {
             files.push(path);
         }
     }

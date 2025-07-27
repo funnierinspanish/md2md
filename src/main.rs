@@ -91,12 +91,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Validate paths
     if !source_path.exists() {
-        eprintln!("Error: Source path does not exist: {:?}", source_path);
+        eprintln!("Error: Source path does not exist: {source_path:?}");
         std::process::exit(1);
     }
 
     if !partials_path.exists() {
-        eprintln!("Error: Partials path does not exist: {:?}", partials_path);
+        eprintln!("Error: Partials path does not exist: {partials_path:?}");
         std::process::exit(1);
     }
 
@@ -112,8 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .expect("Failed to validate directory output path")
     } else {
         eprintln!(
-            "Error: Input path is neither a file nor a directory: {:?}",
-            source_path
+            "Error: Input path is neither a file nor a directory: {source_path:?}"
         );
         std::process::exit(1);
     };
@@ -148,8 +147,7 @@ fn validate_file_output(output_path: &Path) -> Result<(), Box<dyn std::error::Er
 
     if is_directory {
         eprintln!(
-            "Error: Input is a file, but output path appears to be a directory: {:?}",
-            output_path
+            "Error: Input is a file, but output path appears to be a directory: {output_path:?}"
         );
         eprintln!("       When processing a single file, output must be a file path.");
         eprintln!("       Example: input.md -> output.md (not input.md -> output-dir/)");
@@ -175,8 +173,7 @@ fn validate_directory_output(
 
     if looks_like_file {
         eprintln!(
-            "Error: Input is a directory, but output path appears to be a file: {:?}",
-            output_path
+            "Error: Input is a directory, but output path appears to be a file: {output_path:?}"
         );
         eprintln!("       When processing a directory, output must be a directory path.");
         eprintln!("       Example: src-dir -> output-dir (not src-dir -> output.md)");
@@ -191,15 +188,13 @@ fn validate_directory_output(
         } else if ci_mode {
             // CI mode without force: exit with error
             eprintln!(
-                "Error: Output directory {:?} does not exist. Use --force to create it.",
-                output_path
+                "Error: Output directory {output_path:?} does not exist. Use --force to create it."
             );
             std::process::exit(1);
         } else {
             // Interactive mode: ask user
             print!(
-                "Output directory {:?} doesn't exist. Create it? (y/N): ",
-                output_path
+                "Output directory {output_path:?} doesn't exist. Create it? (y/N): "
             );
             std::io::stdout().flush().expect("Failed to flush stdout");
 
@@ -247,15 +242,13 @@ fn handle_file_output_logic(
             } else if ci_mode {
                 // CI mode without force: exit with error if directory doesn't exist
                 eprintln!(
-                    "Error: Output directory {:?} does not exist. Use --force to create it.",
-                    output_path
+                    "Error: Output directory {output_path:?} does not exist. Use --force to create it."
                 );
                 std::process::exit(1);
             } else {
                 // Interactive mode: ask user
                 print!(
-                    "Output directory {:?} doesn't exist. Create it? (y/N): ",
-                    output_path
+                    "Output directory {output_path:?} doesn't exist. Create it? (y/N): "
                 );
                 std::io::stdout().flush().expect("Failed to flush stdout");
 
@@ -285,15 +278,13 @@ fn handle_file_output_logic(
             } else if ci_mode {
                 // CI mode: exit with error if file exists and no force flag
                 eprintln!(
-                    "Error: Output file {:?} already exists. Use --force to overwrite.",
-                    output_path
+                    "Error: Output file {output_path:?} already exists. Use --force to overwrite."
                 );
                 std::process::exit(1);
             } else {
                 // Interactive mode: ask for overwrite permission
                 print!(
-                    "Output file {:?} already exists. Overwrite? (y/N): ",
-                    output_path
+                    "Output file {output_path:?} already exists. Overwrite? (y/N): "
                 );
                 std::io::stdout().flush().expect("Failed to flush stdout");
 
@@ -321,15 +312,13 @@ fn handle_file_output_logic(
                     } else if ci_mode {
                         // CI mode without force: exit with error
                         eprintln!(
-                            "Error: Output directory {:?} does not exist. Use --force to create it.",
-                            parent
+                            "Error: Output directory {parent:?} does not exist. Use --force to create it."
                         );
                         std::process::exit(1);
                     } else {
                         // Interactive mode: ask user
                         print!(
-                            "Output directory {:?} doesn't exist. Create it? (y/N): ",
-                            parent
+                            "Output directory {parent:?} doesn't exist. Create it? (y/N): "
                         );
                         std::io::stdout().flush().expect("Failed to flush stdout");
 
@@ -377,7 +366,7 @@ fn run_tui_mode(
     std::thread::spawn(move || {
         let _ = md2md::processor::process_files(
             &processing_config,
-            &mut *processing_summary
+            &mut processing_summary
                 .lock()
                 .expect("Failed to acquire processing summary lock in background thread"),
             |_| {}, // No progress callback needed for TUI
@@ -660,13 +649,13 @@ fn run_console_mode(
 
     md2md::processor::process_files(
         &config,
-        &mut *summary
+        &mut summary
             .lock()
             .expect("Failed to acquire summary lock for console mode processing"),
         |summary| {
             if config.verbose {
                 if let Some(current) = &summary.current_file {
-                    println!("Processing: {}", current);
+                    println!("Processing: {current}");
                 }
             }
         },

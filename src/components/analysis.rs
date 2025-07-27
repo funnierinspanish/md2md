@@ -53,14 +53,14 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         Line::from(vec![
             Span::raw("  ✓ "),
             Span::styled(
-                format!("{} successful", successful_files),
+                format!("{successful_files} successful"),
                 Style::default().fg(Color::Green),
             ),
         ]),
         Line::from(vec![
             Span::raw("  ✗ "),
             Span::styled(
-                format!("{} failed", failed_files),
+                format!("{failed_files} failed"),
                 Style::default().fg(Color::Red),
             ),
         ]),
@@ -68,21 +68,21 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         Line::from(vec![
             Span::raw("Includes: "),
             Span::styled(
-                format!("{} total", total_includes),
+                format!("{total_includes} total"),
                 Style::default().fg(Color::Cyan),
             ),
         ]),
         Line::from(vec![
             Span::raw("  ✓ "),
             Span::styled(
-                format!("{} successful", successful_includes),
+                format!("{successful_includes} successful"),
                 Style::default().fg(Color::Green),
             ),
         ]),
         Line::from(vec![
             Span::raw("  ✗ "),
             Span::styled(
-                format!("{} failed", failed_includes),
+                format!("{failed_includes} failed"),
                 Style::default().fg(Color::Red),
             ),
         ]),
