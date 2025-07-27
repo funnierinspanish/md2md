@@ -1,6 +1,6 @@
 ## Examples
 
-See the `examples/` directory for comprehensive demonstrations of md2md features:
+See the `examples/` directory for demonstrations of md2md features:
 
 ```bash
 # Process include examples

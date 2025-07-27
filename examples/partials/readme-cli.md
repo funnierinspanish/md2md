@@ -7,13 +7,14 @@ Arguments:
   <INPUT_PATH>  The source file or directory to be processed
 
 Options:
-  -p, --partials-path <PARTIALS>    The directory containing partials [default: partials]
+  -p, --partials-path <PARTIALS>    The directory containing the partials. Default: `partials` [default: partials]
   -o, --output-path <OUTPUT>        Output path (file or directory) [default: out]
   -b, --batch                       Process directories recursively (batch mode)
   -v, --verbose                     Verbose output
-      --ci                          Disable TUI interface (use simple console output)
-  -f, --force                       Force overwrite existing files and create directories
-  -h, --help                        Print help
+  -c, --ci                          Disable TUI interface (use simple console output)
+  -f, --force                       Force overwrite existing files and create directories without prompting
+      --fix-code-fences <LANGUAGE>  Fix code fences that don't specify a language by adding a default language [default: text]
+  -h, --help                        Print help (see more with '--help')
   -V, --version                     Print version
 ```
 

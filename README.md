@@ -1,6 +1,6 @@
 # md2md
 
-A powerful Markdown processor that supports include directives and code snippet inclusion for reusable content composition.
+A Markdown to Markdown processor that supports include directives and code snippet inclusion for reusable content composition... A templating system for Markdown that outputs to Markdown.
 
 ## Overview
 
@@ -14,14 +14,14 @@ md2md allows you to compose documents from reusable markdown partials and code s
 
 ## Features
 
-- 🔗 **Include directives** - Compose documents from reusable partials
-- � **Code snippet inclusion** - Include code files with syntax highlighting
-- �📁 **Batch processing** - Process entire directories at once  
-- 🖥️  **Interactive TUI** - Beautiful terminal interface for monitoring progress
-- 🤖 **CI/automation mode** - Non-interactive processing for pipelines
-- 🛡️ **Force mode** - Automatic overwrite and directory creation
-- 📊 **Detailed reporting** - Comprehensive processing statistics
-- ✅ **Input/Output validation** - Enforces consistent file/directory types
+- **Include directives** - Compose documents from reusable partials
+- **Code snippet inclusion** - Include code files with syntax highlighting
+- **Batch processing** - Process entire directories at once  
+- **Interactive TUI** - Beautiful terminal interface for monitoring progress
+- **CI/automation mode** - Non-interactive processing for pipelines
+- **Force mode** - Automatic overwrite and directory creation
+- **Detailed reporting** - Comprehensive processing statistics
+- **Input/Output validation** - Enforces consistent file/directory types
 
 ## Two Main Directive Types
 
@@ -32,7 +32,17 @@ md2md allows you to compose documents from reusable markdown partials and code s
 
 ### Installation
 
+#### Direct Install from GitHub (Recommended)
+
 ```bash
+cargo install --git https://github.com/funnierinspanish/md2md.git
+```
+
+#### From Source
+
+```bash
+git clone https://github.com/funnierinspanish/md2md.git
+cd md2md
 cargo build --release
 ```
 
@@ -198,13 +208,14 @@ Arguments:
   <INPUT_PATH>  The source file or directory to be processed
 
 Options:
-  -p, --partials-path <PARTIALS>    The directory containing partials [default: partials]
+  -p, --partials-path <PARTIALS>    The directory containing the partials. Default: `partials` [default: partials]
   -o, --output-path <OUTPUT>        Output path (file or directory) [default: out]
   -b, --batch                       Process directories recursively (batch mode)
   -v, --verbose                     Verbose output
-      --ci                          Disable TUI interface (use simple console output)
-  -f, --force                       Force overwrite existing files and create directories
-  -h, --help                        Print help
+  -c, --ci                          Disable TUI interface (use simple console output)
+  -f, --force                       Force overwrite existing files and create directories without prompting
+      --fix-code-fences <LANGUAGE>  Fix code fences that don't specify a language by adding a default language [default: text]
+  -h, --help                        Print help (see more with '--help')
   -V, --version                     Print version
 ```
 
@@ -238,7 +249,7 @@ md2md src-docs -p partials -o output.md --batch
 
 ## Examples
 
-See the `examples/` directory for comprehensive demonstrations of md2md features:
+See the `examples/` directory for demonstrations of md2md features:
 
 ```bash
 # Process include examples
@@ -298,4 +309,3 @@ This aligns with the "partial" concept used in many templating systems where par
 ## CLI Compatibility
 
 The CLI flag remains `--templates-path` for backward compatibility, but conceptually these are partials directories containing reusable content pieces.
-

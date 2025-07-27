@@ -1,6 +1,6 @@
 # md2md
 
-A powerful Markdown processor that supports include directives and code snippet inclusion for reusable content composition.
+A Markdown to Markdown processor that supports include directives and code snippet inclusion for reusable content composition... A templating system for Markdown that outputs to Markdown.
 
 ## Overview
 
