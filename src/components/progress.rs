@@ -1,15 +1,18 @@
 use crate::app::App;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
-    Frame,
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let summary = app.summary.lock().expect("Failed to acquire summary lock for progress rendering");
-    
+    let summary = app
+        .summary
+        .lock()
+        .expect("Failed to acquire summary lock for progress rendering");
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -23,10 +26,17 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     // Overall progress
     let progress = summary.get_progress_percentage();
     let gauge = Gauge::default()
-        .block(Block::default().borders(Borders::ALL).title("Overall Progress"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Overall Progress"),
+        )
         .gauge_style(Style::default().fg(Color::Blue))
         .percent(progress as u16)
-        .label(format!("{:.1}% ({}/{})", progress, summary.processed_files, summary.total_files));
+        .label(format!(
+            "{:.1}% ({}/{})",
+            progress, summary.processed_files, summary.total_files
+        ));
     f.render_widget(gauge, chunks[0]);
 
     // Current file
@@ -44,27 +54,48 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let stats_text = vec![
         Line::from(vec![
             Span::raw("Files processed: "),
-            Span::styled(format!("{}", summary.processed_files), Style::default().fg(Color::Green)),
+            Span::styled(
+                format!("{}", summary.processed_files),
+                Style::default().fg(Color::Green),
+            ),
             Span::raw(" / "),
-            Span::styled(format!("{}", summary.total_files), Style::default().fg(Color::Blue)),
+            Span::styled(
+                format!("{}", summary.total_files),
+                Style::default().fg(Color::Blue),
+            ),
         ]),
         Line::from(vec![
             Span::raw("Successful: "),
-            Span::styled(format!("{}", summary.get_success_count()), Style::default().fg(Color::Green)),
+            Span::styled(
+                format!("{}", summary.get_success_count()),
+                Style::default().fg(Color::Green),
+            ),
         ]),
         Line::from(vec![
             Span::raw("Failed: "),
-            Span::styled(format!("{}", summary.get_failed_count()), Style::default().fg(Color::Red)),
+            Span::styled(
+                format!("{}", summary.get_failed_count()),
+                Style::default().fg(Color::Red),
+            ),
         ]),
         Line::from(vec![
             Span::raw("Includes processed: "),
-            Span::styled(format!("{}", summary.get_successful_includes()), Style::default().fg(Color::Green)),
+            Span::styled(
+                format!("{}", summary.get_successful_includes()),
+                Style::default().fg(Color::Green),
+            ),
             Span::raw(" / "),
-            Span::styled(format!("{}", summary.get_total_includes()), Style::default().fg(Color::Blue)),
+            Span::styled(
+                format!("{}", summary.get_total_includes()),
+                Style::default().fg(Color::Blue),
+            ),
         ]),
         Line::from(vec![
             Span::raw("Elapsed time: "),
-            Span::styled(format!("{:.1}s", elapsed.as_secs_f64()), Style::default().fg(Color::Yellow)),
+            Span::styled(
+                format!("{:.1}s", elapsed.as_secs_f64()),
+                Style::default().fg(Color::Yellow),
+            ),
         ]),
     ];
 
@@ -73,7 +104,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(stats, chunks[2]);
 
     // Processing log (recent activity)
-    let log_items: Vec<ListItem> = summary.results
+    let log_items: Vec<ListItem> = summary
+        .results
         .iter()
         .rev()
         .take(10)
@@ -88,7 +120,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         })
         .collect();
 
-    let log = List::new(log_items)
-        .block(Block::default().borders(Borders::ALL).title("Recent Activity"));
+    let log = List::new(log_items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Recent Activity"),
+    );
     f.render_widget(log, chunks[3]);
 }

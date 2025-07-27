@@ -1,18 +1,20 @@
 use clap::{Parser, crate_version};
 use md2md::{
-    types::{ProcessingSummary, ProcessingConfig},
     app::App,
-    tui::Tui,
+    cli_messages,
     event::EventHandler,
-    cli_messages
+    tui::Tui,
+    types::{ProcessingConfig, ProcessingSummary},
 };
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::io::Write;
 
 #[derive(Parser)]
 #[clap(name = "app_name", version = crate_version!())]
-#[command(about = "Markdown to Markdown processor with include directives and batch processing", long_about = "
+#[command(
+    about = "Markdown to Markdown processor with include directives and batch processing",
+    long_about = "
 A powerful Markdown processor that supports include directives similar to markedpp.
 
 INCLUDE SYNTAX:
@@ -40,7 +42,8 @@ EXAMPLES:
 
   # Verbose output
   md2md src-dir -p partials --batch --verbose
-")]
+"
+)]
 struct Cli {
     /// The source file or directory to be processed
     #[arg()]
@@ -71,7 +74,11 @@ struct Cli {
     force: bool,
 
     /// Fix code fences that don't specify a language by adding a default language
-    #[arg(long = "fix-code-fences", value_name = "LANGUAGE", default_value = "text")]
+    #[arg(
+        long = "fix-code-fences",
+        value_name = "LANGUAGE",
+        default_value = "text"
+    )]
     fix_code_fences: Option<String>,
 }
 
@@ -96,8 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Validate input/output type matching: file input → file output, directory input → directory output
     let final_output_path = if source_path.is_file() {
         // Input is a file, output must be a file path
-        validate_file_output(output_path)
-            .expect("Failed to validate file output path");
+        validate_file_output(output_path).expect("Failed to validate file output path");
         handle_file_output_logic(source_path, output_path, cli.ci, cli.force)
             .expect("Failed to handle file output logic")
     } else if source_path.is_dir() {
@@ -105,7 +111,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         validate_directory_output(output_path, cli.ci, cli.force)
             .expect("Failed to validate directory output path")
     } else {
-        eprintln!("Error: Input path is neither a file nor a directory: {:?}", source_path);
+        eprintln!(
+            "Error: Input path is neither a file nor a directory: {:?}",
+            source_path
+        );
         std::process::exit(1);
     };
 
@@ -122,12 +131,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use TUI interface unless disabled or when running in CI/non-interactive environments
     if !cli.ci && (cli.verbose || atty::is(atty::Stream::Stdout)) {
-        run_tui_mode(config, summary)
-            .expect("Failed to run TUI mode");
+        run_tui_mode(config, summary).expect("Failed to run TUI mode");
     } else {
         // Simple console mode for backwards compatibility
-        run_console_mode(config, summary)
-            .expect("Failed to run console mode");
+        run_console_mode(config, summary).expect("Failed to run console mode");
     }
 
     Ok(())
@@ -137,114 +144,131 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn validate_file_output(output_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Check if output path looks like a directory (more permissive for files without extensions)
     let path_str = output_path.as_os_str().to_str().unwrap_or("");
-    let is_directory = output_path.is_dir() || 
-                      path_str.ends_with('/') || 
-                      path_str.ends_with('\\');
-    
+    let is_directory = output_path.is_dir() || path_str.ends_with('/') || path_str.ends_with('\\');
+
     if is_directory {
-        eprintln!("Error: Input is a file, but output path appears to be a directory: {:?}", output_path);
+        eprintln!(
+            "Error: Input is a file, but output path appears to be a directory: {:?}",
+            output_path
+        );
         eprintln!("       When processing a single file, output must be a file path.");
         eprintln!("       Example: input.md -> output.md (not input.md -> output-dir/)");
         std::process::exit(1);
     }
-    
+
     Ok(())
 }
 
 /// Validates that the output path is suitable for directory output and ensures it exists
-fn validate_directory_output(output_path: &Path, ci_mode: bool, force: bool) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn validate_directory_output(
+    output_path: &Path,
+    ci_mode: bool,
+    force: bool,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     // Check if output path looks like a file (ends with path separator or has obvious file extension)
     let path_str = output_path.as_os_str().to_str().unwrap_or("");
-    let looks_like_file = path_str.ends_with(".md") || 
-                         path_str.ends_with(".txt") || 
-                         path_str.ends_with(".html") ||
-                         path_str.ends_with(".pdf") ||
-                         (output_path.extension().is_some() && path_str.contains('.'));
-    
+    let looks_like_file = path_str.ends_with(".md")
+        || path_str.ends_with(".txt")
+        || path_str.ends_with(".html")
+        || path_str.ends_with(".pdf")
+        || (output_path.extension().is_some() && path_str.contains('.'));
+
     if looks_like_file {
-        eprintln!("Error: Input is a directory, but output path appears to be a file: {:?}", output_path);
+        eprintln!(
+            "Error: Input is a directory, but output path appears to be a file: {:?}",
+            output_path
+        );
         eprintln!("       When processing a directory, output must be a directory path.");
         eprintln!("       Example: src-dir -> output-dir (not src-dir -> output.md)");
         std::process::exit(1);
     }
-    
+
     // Ensure the directory exists
     if !output_path.exists() {
         if force {
             // Force mode: automatically create the directory
-            std::fs::create_dir_all(output_path)
-                .expect("Failed to create output directory");
+            std::fs::create_dir_all(output_path).expect("Failed to create output directory");
         } else if ci_mode {
             // CI mode without force: exit with error
-            eprintln!("Error: Output directory {:?} does not exist. Use --force to create it.", output_path);
+            eprintln!(
+                "Error: Output directory {:?} does not exist. Use --force to create it.",
+                output_path
+            );
             std::process::exit(1);
         } else {
             // Interactive mode: ask user
-            print!("Output directory {:?} doesn't exist. Create it? (y/N): ", output_path);
-            std::io::stdout().flush()
-                .expect("Failed to flush stdout");
-            
+            print!(
+                "Output directory {:?} doesn't exist. Create it? (y/N): ",
+                output_path
+            );
+            std::io::stdout().flush().expect("Failed to flush stdout");
+
             let mut input = String::new();
-            std::io::stdin().read_line(&mut input)
+            std::io::stdin()
+                .read_line(&mut input)
                 .expect("Failed to read user input");
             let input = input.trim().to_lowercase();
-            
+
             if input == "y" || input == "yes" {
-                std::fs::create_dir_all(output_path)
-                    .expect("Failed to create output directory");
+                std::fs::create_dir_all(output_path).expect("Failed to create output directory");
             } else {
                 eprintln!("Directory creation cancelled. Exiting.");
                 std::process::exit(1);
             }
         }
     }
-    
+
     Ok(output_path.to_path_buf())
 }
 
-fn handle_file_output_logic(source_path: &Path, output_path: &Path, ci_mode: bool, force: bool) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn handle_file_output_logic(
+    source_path: &Path,
+    output_path: &Path,
+    ci_mode: bool,
+    force: bool,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     // At this point, validation has already confirmed output_path is intended as a file
     // Check if output_path is intended to be a directory (only explicit directory indicators)
     let path_str = output_path.as_os_str().to_str().unwrap_or("");
-    let is_directory = output_path.is_dir() || 
-                      path_str.ends_with('/') || 
-                      path_str.ends_with('\\');
-    
+    let is_directory = output_path.is_dir() || path_str.ends_with('/') || path_str.ends_with('\\');
+
     if is_directory {
         if output_path.exists() {
             // Output is an existing directory, use source filename
-            let source_filename = source_path.file_name()
-                .expect("Invalid source filename");
+            let source_filename = source_path.file_name().expect("Invalid source filename");
             Ok(output_path.join(source_filename))
         } else {
             // Output is a directory that doesn't exist
             if force {
                 // In force mode, automatically create the directory
-                std::fs::create_dir_all(output_path)
-                    .expect("Failed to create output directory");
-                let source_filename = source_path.file_name()
-                    .expect("Invalid source filename");
+                std::fs::create_dir_all(output_path).expect("Failed to create output directory");
+                let source_filename = source_path.file_name().expect("Invalid source filename");
                 Ok(output_path.join(source_filename))
             } else if ci_mode {
                 // CI mode without force: exit with error if directory doesn't exist
-                eprintln!("Error: Output directory {:?} does not exist. Use --force to create it.", output_path);
+                eprintln!(
+                    "Error: Output directory {:?} does not exist. Use --force to create it.",
+                    output_path
+                );
                 std::process::exit(1);
             } else {
                 // Interactive mode: ask user
-                print!("Output directory {:?} doesn't exist. Create it? (y/N): ", output_path);
-                std::io::stdout().flush()
-                    .expect("Failed to flush stdout");
-                
+                print!(
+                    "Output directory {:?} doesn't exist. Create it? (y/N): ",
+                    output_path
+                );
+                std::io::stdout().flush().expect("Failed to flush stdout");
+
                 let mut input = String::new();
-                std::io::stdin().read_line(&mut input)
+                std::io::stdin()
+                    .read_line(&mut input)
                     .expect("Failed to read user input");
                 let input = input.trim().to_lowercase();
-                
+
                 if input == "y" || input == "yes" {
                     std::fs::create_dir_all(output_path)
                         .expect("Failed to create output directory");
-                    let source_filename = source_path.file_name()
-                        .expect("Invalid source filename");
+                    let source_filename = source_path.file_name().expect("Invalid source filename");
                     Ok(output_path.join(source_filename))
                 } else {
                     eprintln!("Directory creation cancelled. Exiting.");
@@ -260,19 +284,25 @@ fn handle_file_output_logic(source_path: &Path, output_path: &Path, ci_mode: boo
                 Ok(output_path.to_path_buf())
             } else if ci_mode {
                 // CI mode: exit with error if file exists and no force flag
-                eprintln!("Error: Output file {:?} already exists. Use --force to overwrite.", output_path);
+                eprintln!(
+                    "Error: Output file {:?} already exists. Use --force to overwrite.",
+                    output_path
+                );
                 std::process::exit(1);
             } else {
                 // Interactive mode: ask for overwrite permission
-                print!("Output file {:?} already exists. Overwrite? (y/N): ", output_path);
-                std::io::stdout().flush()
-                    .expect("Failed to flush stdout");
-                
+                print!(
+                    "Output file {:?} already exists. Overwrite? (y/N): ",
+                    output_path
+                );
+                std::io::stdout().flush().expect("Failed to flush stdout");
+
                 let mut input = String::new();
-                std::io::stdin().read_line(&mut input)
+                std::io::stdin()
+                    .read_line(&mut input)
                     .expect("Failed to read user input");
                 let input = input.trim().to_lowercase();
-                
+
                 if input == "y" || input == "yes" {
                     Ok(output_path.to_path_buf())
                 } else {
@@ -286,24 +316,29 @@ fn handle_file_output_logic(source_path: &Path, output_path: &Path, ci_mode: boo
                 if !parent.exists() {
                     if force {
                         // Force mode: create parent directories
-                        std::fs::create_dir_all(parent)
-                            .expect("Failed to create parent directory");
+                        std::fs::create_dir_all(parent).expect("Failed to create parent directory");
                         Ok(output_path.to_path_buf())
                     } else if ci_mode {
                         // CI mode without force: exit with error
-                        eprintln!("Error: Output directory {:?} does not exist. Use --force to create it.", parent);
+                        eprintln!(
+                            "Error: Output directory {:?} does not exist. Use --force to create it.",
+                            parent
+                        );
                         std::process::exit(1);
                     } else {
                         // Interactive mode: ask user
-                        print!("Output directory {:?} doesn't exist. Create it? (y/N): ", parent);
-                        std::io::stdout().flush()
-                            .expect("Failed to flush stdout");
-                        
+                        print!(
+                            "Output directory {:?} doesn't exist. Create it? (y/N): ",
+                            parent
+                        );
+                        std::io::stdout().flush().expect("Failed to flush stdout");
+
                         let mut input = String::new();
-                        std::io::stdin().read_line(&mut input)
+                        std::io::stdin()
+                            .read_line(&mut input)
                             .expect("Failed to read user input");
                         let input = input.trim().to_lowercase();
-                        
+
                         if input == "y" || input == "yes" {
                             std::fs::create_dir_all(parent)
                                 .expect("Failed to create parent directory");
@@ -330,31 +365,31 @@ fn run_tui_mode(
     summary: Arc<Mutex<ProcessingSummary>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Initialize terminal
-    let mut tui = Tui::new()
-        .expect("Failed to create TUI instance");
-    tui.init()
-        .expect("Failed to initialize TUI");
+    let mut tui = Tui::new().expect("Failed to create TUI instance");
+    tui.init().expect("Failed to initialize TUI");
 
     // Create application
     let mut app = App::new(config.clone(), summary.clone());
-    
+
     // Start processing in background
     let processing_summary = summary.clone();
     let processing_config = config.clone();
     std::thread::spawn(move || {
         let _ = md2md::processor::process_files(
             &processing_config,
-            &mut *processing_summary.lock().expect("Failed to acquire processing summary lock in background thread"),
+            &mut *processing_summary
+                .lock()
+                .expect("Failed to acquire processing summary lock in background thread"),
             |_| {}, // No progress callback needed for TUI
         );
-        
+
         // Mark processing as complete (we'll check this via the completion logic in app)
         // Note: We don't have mark_complete on ProcessingSummary, so we rely on the app's logic
     });
 
     // Start event handler
     let events = EventHandler::new(250);
-    
+
     // Main event loop
     loop {
         // Draw UI
@@ -368,13 +403,17 @@ fn run_tui_mode(
 
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)])
+                .constraints([
+                    Constraint::Length(3),
+                    Constraint::Min(0),
+                    Constraint::Length(3),
+                ])
                 .split(f.area());
 
             // Get available tabs
             let available_tabs = app.get_available_tabs();
             let tab_titles: Vec<&str> = available_tabs.iter().map(|tab| tab.as_str()).collect();
-            
+
             // Create tabs widget
             let tabs = Tabs::new(tab_titles)
                 .block(Block::default().borders(Borders::ALL).title("md2md"))
@@ -404,32 +443,30 @@ fn run_tui_mode(
 
             // Add help footer
             use ratatui::{
-                text::{Line, Span},
-                widgets::{Paragraph, Clear},
                 layout::Alignment,
+                text::{Line, Span},
+                widgets::{Clear, Paragraph},
             };
-            let help_text = vec![
-                Line::from(vec![
-                    Span::styled("Keys: ", Style::default().fg(Color::White).bold()),
-                    Span::styled("q", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw(" Quit | "),
-                    Span::styled("Tab", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw("/"),
-                    Span::styled("←→", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw(" Switch tabs | "),
-                    Span::styled("↑↓", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw("/"),
-                    Span::styled("j", Style::default().fg(Color::Yellow).bold()),
-                    Span::styled("k", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw(" Navigate | "),
-                    Span::styled("1-5", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw(" Direct tab | "),
-                    Span::styled("e", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw(" Toggle errors | "),
-                    Span::styled("?", Style::default().fg(Color::Yellow).bold()),
-                    Span::raw(" Help"),
-                ]),
-            ];
+            let help_text = vec![Line::from(vec![
+                Span::styled("Keys: ", Style::default().fg(Color::White).bold()),
+                Span::styled("q", Style::default().fg(Color::Yellow).bold()),
+                Span::raw(" Quit | "),
+                Span::styled("Tab", Style::default().fg(Color::Yellow).bold()),
+                Span::raw("/"),
+                Span::styled("←→", Style::default().fg(Color::Yellow).bold()),
+                Span::raw(" Switch tabs | "),
+                Span::styled("↑↓", Style::default().fg(Color::Yellow).bold()),
+                Span::raw("/"),
+                Span::styled("j", Style::default().fg(Color::Yellow).bold()),
+                Span::styled("k", Style::default().fg(Color::Yellow).bold()),
+                Span::raw(" Navigate | "),
+                Span::styled("1-5", Style::default().fg(Color::Yellow).bold()),
+                Span::raw(" Direct tab | "),
+                Span::styled("e", Style::default().fg(Color::Yellow).bold()),
+                Span::raw(" Toggle errors | "),
+                Span::styled("?", Style::default().fg(Color::Yellow).bold()),
+                Span::raw(" Help"),
+            ])];
             let help_widget = Paragraph::new(help_text)
                 .block(Block::default().borders(Borders::ALL))
                 .style(Style::default().fg(Color::Gray));
@@ -445,7 +482,7 @@ fn run_tui_mode(
                         Constraint::Percentage(20),
                     ])
                     .split(f.area())[1];
-                
+
                 let help_area = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints([
@@ -456,50 +493,83 @@ fn run_tui_mode(
                     .split(help_area)[1];
 
                 f.render_widget(Clear, help_area);
-                
+
                 let detailed_help = vec![
-                    Line::from(Span::styled("md2md - Markdown Processor with Include Directives", Style::default().fg(Color::Yellow).bold())),
+                    Line::from(Span::styled(
+                        "md2md - Markdown Processor with Include Directives",
+                        Style::default().fg(Color::Yellow).bold(),
+                    )),
                     Line::from(""),
-                    Line::from(Span::styled("KEYBOARD SHORTCUTS:", Style::default().fg(Color::White).bold())),
+                    Line::from(Span::styled(
+                        "KEYBOARD SHORTCUTS:",
+                        Style::default().fg(Color::White).bold(),
+                    )),
                     Line::from(""),
                     Line::from(vec![
                         Span::styled("  q,        ", Style::default().fg(Color::Yellow).bold()),
                         Span::raw("Quit the application"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  Tab, →        ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  Tab, →        ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Next tab"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  Shift+Tab, ←  ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  Shift+Tab, ←  ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Previous tab"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  ↑, k          ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  ↑, k          ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Previous file (in Files tab)"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  ↓, j          ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  ↓, j          ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Next file (in Files tab)"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  1-5           ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  1-5           ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Jump directly to tab (1=Progress, 2=Files, etc.)"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  e             ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  e             ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Toggle error details visibility"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  ?             ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  ?             ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Toggle this help dialog"),
                     ]),
                     Line::from(vec![
-                        Span::styled("  r             ", Style::default().fg(Color::Yellow).bold()),
+                        Span::styled(
+                            "  r             ",
+                            Style::default().fg(Color::Yellow).bold(),
+                        ),
                         Span::raw("Refresh (future use)"),
                     ]),
                     Line::from(""),
-                    Line::from(Span::styled("TABS:", Style::default().fg(Color::White).bold())),
+                    Line::from(Span::styled(
+                        "TABS:",
+                        Style::default().fg(Color::White).bold(),
+                    )),
                     Line::from(""),
                     Line::from(vec![
                         Span::styled("  Progress      ", Style::default().fg(Color::Cyan).bold()),
@@ -522,21 +592,26 @@ fn run_tui_mode(
                         Span::raw("Detailed error information (if errors exist)"),
                     ]),
                     Line::from(""),
-                    Line::from(Span::styled("Press ? again to close this help", Style::default().fg(Color::Gray))),
+                    Line::from(Span::styled(
+                        "Press ? again to close this help",
+                        Style::default().fg(Color::Gray),
+                    )),
                 ];
-                
+
                 let help_dialog = Paragraph::new(detailed_help)
-                    .block(Block::default()
-                        .borders(Borders::ALL)
-                        .title(" Help ")
-                        .title_alignment(Alignment::Center)
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .title(" Help ")
+                            .title_alignment(Alignment::Center),
                     )
                     .style(Style::default().fg(Color::White))
                     .alignment(Alignment::Left);
                 f.render_widget(help_dialog, help_area);
             }
-        }).expect("Failed to draw TUI frame");
-        
+        })
+        .expect("Failed to draw TUI frame");
+
         // Handle events
         match events.next() {
             Ok(action) => {
@@ -544,13 +619,18 @@ fn run_tui_mode(
                 if app.handle_action(action) {
                     break;
                 }
-                
+
                 // Auto-switch to final tab if processing is complete
                 if app.is_processing_complete() && !app.has_switched_to_final_tab() {
-                    let summary_guard = summary.lock().expect("Failed to acquire summary lock for final tab switch");
-                    let has_errors = summary_guard.results.iter().any(|r| !r.success) ||
-                        summary_guard.results.iter().any(|r| r.includes.iter().any(|i| !i.success));
-                    
+                    let summary_guard = summary
+                        .lock()
+                        .expect("Failed to acquire summary lock for final tab switch");
+                    let has_errors = summary_guard.results.iter().any(|r| !r.success)
+                        || summary_guard
+                            .results
+                            .iter()
+                            .any(|r| r.includes.iter().any(|i| !i.success));
+
                     if has_errors {
                         app.set_active_tab_to_error_summary();
                     } else {
@@ -564,8 +644,7 @@ fn run_tui_mode(
     }
 
     // Cleanup
-    tui.exit()
-        .expect("Failed to exit TUI");
+    tui.exit().expect("Failed to exit TUI");
     Ok(())
 }
 
@@ -579,10 +658,11 @@ fn run_console_mode(
     println!("Output: {:?}", config.output_path);
     println!();
 
-
     md2md::processor::process_files(
         &config,
-        &mut *summary.lock().expect("Failed to acquire summary lock for console mode processing"),
+        &mut *summary
+            .lock()
+            .expect("Failed to acquire summary lock for console mode processing"),
         |summary| {
             if config.verbose {
                 if let Some(current) = &summary.current_file {
@@ -590,12 +670,14 @@ fn run_console_mode(
                 }
             }
         },
-    ).expect("Failed to process files");
+    )
+    .expect("Failed to process files");
 
     // Print final summary
-    let summary_guard = summary.lock().expect("Failed to acquire summary lock for final summary");
+    let summary_guard = summary
+        .lock()
+        .expect("Failed to acquire summary lock for final summary");
     cli_messages::print_console_summary(&summary_guard, config.verbose);
 
     Ok(())
 }
-

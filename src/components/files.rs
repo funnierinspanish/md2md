@@ -1,15 +1,18 @@
 use crate::app::App;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
-    Frame,
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let summary = app.summary.lock().expect("Failed to acquire summary lock for files rendering");
-    
+    let summary = app
+        .summary
+        .lock()
+        .expect("Failed to acquire summary lock for files rendering");
+
     if summary.results.is_empty() {
         let empty = Paragraph::new("No files processed yet...")
             .block(Block::default().borders(Borders::ALL).title("Files"))
@@ -24,7 +27,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         .split(area);
 
     // Files list
-    let items: Vec<ListItem> = summary.results
+    let items: Vec<ListItem> = summary
+        .results
         .iter()
         .enumerate()
         .map(|(i, result)| {
@@ -39,14 +43,14 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             } else {
                 Style::default().fg(Color::Red)
             };
-            
+
             let icon = if result.success { "✓" } else { "✗" };
             let includes_info = if result.includes.is_empty() {
                 String::new()
             } else {
                 format!(" ({} includes)", result.includes.len())
             };
-            
+
             ListItem::new(format!("{} {}{}", icon, result.file_path, includes_info)).style(style)
         })
         .collect();
@@ -85,7 +89,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 format!("Includes ({}):", selected_result.includes.len()),
                 Style::default().fg(Color::Yellow),
             )));
-            
+
             for include in &selected_result.includes {
                 let status = if include.success { "✓" } else { "✗" };
                 let style = if include.success {
@@ -93,19 +97,26 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 } else {
                     Style::default().fg(Color::Magenta).bold()
                 };
-                
+
                 let mut line_spans = vec![
                     Span::raw("  "),
-                    Span::styled(format!("{} ", status), if include.success { Style::default().fg(Color::Green) } else { Style::default().fg(Color::Red) }),
+                    Span::styled(
+                        format!("{} ", status),
+                        if include.success {
+                            Style::default().fg(Color::Green)
+                        } else {
+                            Style::default().fg(Color::Red)
+                        },
+                    ),
                     Span::styled(&include.path, style),
                 ];
-                
+
                 // Add error message inline if present
                 if let Some(error) = &include.error_message {
                     line_spans.push(Span::styled(" → ", Style::default().fg(Color::Gray)));
                     line_spans.push(Span::styled(error, Style::default().fg(Color::Yellow)));
                 }
-                
+
                 details.push(Line::from(line_spans));
             }
         }

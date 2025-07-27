@@ -1,5 +1,7 @@
 use crate::action::Action;
-use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{
+    self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyEventKind, KeyModifiers,
+};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -31,18 +33,18 @@ impl EventHandler {
                                     return;
                                 }
                             }
-                        },
+                        }
                         CrosstermEvent::Resize(w, h) => {
                             if _sender.send(Action::Resize(w, h)).is_err() {
                                 return;
                             }
-                        },
+                        }
                         CrosstermEvent::Mouse(_) => {
                             // Handle mouse events if needed
-                        },
-                        CrosstermEvent::FocusGained => {},
-                        CrosstermEvent::FocusLost => {},
-                        CrosstermEvent::Paste(_) => {},
+                        }
+                        CrosstermEvent::FocusGained => {}
+                        CrosstermEvent::FocusLost => {}
+                        CrosstermEvent::Paste(_) => {}
                     }
                 }
 

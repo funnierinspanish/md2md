@@ -1,5 +1,5 @@
-use crate::types::{ProcessingSummary, ProcessingConfig};
 use crate::action::Action;
+use crate::types::{ProcessingConfig, ProcessingSummary};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -74,10 +74,14 @@ impl App {
         // Check if processing is complete
         if !self.processing_complete {
             let should_mark_complete = {
-                let summary_guard = self.summary.lock().expect("Failed to acquire summary lock for completion check");
-                summary_guard.total_files > 0 && summary_guard.processed_files >= summary_guard.total_files
+                let summary_guard = self
+                    .summary
+                    .lock()
+                    .expect("Failed to acquire summary lock for completion check");
+                summary_guard.total_files > 0
+                    && summary_guard.processed_files >= summary_guard.total_files
             };
-            
+
             if should_mark_complete {
                 self.mark_processing_complete();
             }
@@ -93,11 +97,14 @@ impl App {
     pub fn mark_processing_complete(&mut self) {
         self.processing_complete = true;
         self.completion_time = Some(Instant::now());
-        
+
         // Check if there are any errors to determine which tab to focus on
-        let summary = self.summary.lock().expect("Failed to acquire summary lock for error check");
+        let summary = self
+            .summary
+            .lock()
+            .expect("Failed to acquire summary lock for error check");
         let has_errors = summary.get_failed_count() > 0 || summary.get_failed_includes() > 0;
-        
+
         if has_errors {
             self.active_tab = ActiveTab::ErrorSummary;
         } else {
@@ -107,10 +114,13 @@ impl App {
 
     /// Navigate to the next tab
     pub fn next_tab(&mut self) {
-        let summary = self.summary.lock().expect("Failed to acquire summary lock for next tab navigation");
+        let summary = self
+            .summary
+            .lock()
+            .expect("Failed to acquire summary lock for next tab navigation");
         let has_errors = summary.get_failed_count() > 0 || summary.get_failed_includes() > 0;
         drop(summary);
-        
+
         self.active_tab = match self.active_tab {
             ActiveTab::Progress => ActiveTab::Files,
             ActiveTab::Files => ActiveTab::Analysis,
@@ -121,17 +131,20 @@ impl App {
                 } else {
                     ActiveTab::Progress
                 }
-            },
+            }
             ActiveTab::ErrorSummary => ActiveTab::Progress,
         }
     }
 
     /// Navigate to the previous tab
     pub fn previous_tab(&mut self) {
-        let summary = self.summary.lock().expect("Failed to acquire summary lock for previous tab navigation");
+        let summary = self
+            .summary
+            .lock()
+            .expect("Failed to acquire summary lock for previous tab navigation");
         let has_errors = summary.get_failed_count() > 0 || summary.get_failed_includes() > 0;
         drop(summary);
-        
+
         self.active_tab = match self.active_tab {
             ActiveTab::Progress => {
                 if self.processing_complete && has_errors {
@@ -139,7 +152,7 @@ impl App {
                 } else {
                     ActiveTab::Summary
                 }
-            },
+            }
             ActiveTab::Files => ActiveTab::Progress,
             ActiveTab::Analysis => ActiveTab::Files,
             ActiveTab::Summary => ActiveTab::Analysis,
@@ -149,7 +162,10 @@ impl App {
 
     /// Navigate to the next file
     pub fn next_file(&mut self) {
-        let summary = self.summary.lock().expect("Failed to acquire summary lock for next file navigation");
+        let summary = self
+            .summary
+            .lock()
+            .expect("Failed to acquire summary lock for next file navigation");
         if !summary.results.is_empty() {
             self.selected_file_index = (self.selected_file_index + 1) % summary.results.len();
         }
@@ -157,7 +173,10 @@ impl App {
 
     /// Navigate to the previous file
     pub fn previous_file(&mut self) {
-        let summary = self.summary.lock().expect("Failed to acquire summary lock for previous file navigation");
+        let summary = self
+            .summary
+            .lock()
+            .expect("Failed to acquire summary lock for previous file navigation");
         if !summary.results.is_empty() {
             self.selected_file_index = if self.selected_file_index == 0 {
                 summary.results.len() - 1
@@ -180,21 +199,32 @@ impl App {
     /// Get the tab index for the current active tab
     pub fn get_tab_index(&self) -> usize {
         let available_tabs = self.get_available_tabs();
-        available_tabs.iter().position(|&tab| tab == self.active_tab).unwrap_or(0)
+        available_tabs
+            .iter()
+            .position(|&tab| tab == self.active_tab)
+            .unwrap_or(0)
     }
 
     /// Get the list of available tabs
     pub fn get_available_tabs(&self) -> Vec<ActiveTab> {
-        let summary = self.summary.lock().expect("Failed to acquire summary lock for available tabs check");
-        let mut tabs = vec![ActiveTab::Progress, ActiveTab::Files, ActiveTab::Analysis, ActiveTab::Summary];
-        
+        let summary = self
+            .summary
+            .lock()
+            .expect("Failed to acquire summary lock for available tabs check");
+        let mut tabs = vec![
+            ActiveTab::Progress,
+            ActiveTab::Files,
+            ActiveTab::Analysis,
+            ActiveTab::Summary,
+        ];
+
         // Add ErrorSummary tab only if there are errors
         let has_errors = summary.get_failed_count() > 0 || summary.get_failed_includes() > 0;
-        
+
         if has_errors {
             tabs.push(ActiveTab::ErrorSummary);
         }
-        
+
         tabs
     }
 
@@ -264,8 +294,8 @@ impl App {
                 false
             }
             Action::HideHelp => {
-              self.help_visible = false;
-              false
+                self.help_visible = false;
+                false
             }
             Action::ToggleHelp => {
                 self.help_visible = !self.help_visible;
@@ -287,14 +317,18 @@ impl App {
                     4 => self.active_tab = ActiveTab::Summary,
                     5 => {
                         // Only allow access to Error Summary if there are errors
-                        let summary = self.summary.lock().expect("Failed to acquire summary lock for error tab access check");
-                        let has_errors = summary.get_failed_count() > 0 || summary.get_failed_includes() > 0;
+                        let summary = self
+                            .summary
+                            .lock()
+                            .expect("Failed to acquire summary lock for error tab access check");
+                        let has_errors =
+                            summary.get_failed_count() > 0 || summary.get_failed_includes() > 0;
                         drop(summary);
-                        
+
                         if self.processing_complete && has_errors {
                             self.active_tab = ActiveTab::ErrorSummary;
                         }
-                    },
+                    }
                     _ => {} // Invalid tab number
                 }
                 false

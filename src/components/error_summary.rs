@@ -1,22 +1,23 @@
 use crate::app::App;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
-    Frame,
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let summary = app.summary.lock().expect("Failed to acquire summary lock for error summary rendering");
-    
+    let summary = app
+        .summary
+        .lock()
+        .expect("Failed to acquire summary lock for error summary rendering");
+
     // Collect all errors
-    let file_errors: Vec<_> = summary.results
-        .iter()
-        .filter(|r| !r.success)
-        .collect();
-    
-    let include_errors: Vec<_> = summary.results
+    let file_errors: Vec<_> = summary.results.iter().filter(|r| !r.success).collect();
+
+    let include_errors: Vec<_> = summary
+        .results
         .iter()
         .flat_map(|r| &r.includes)
         .filter(|i| !i.success)
@@ -31,7 +32,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             Line::from(""),
             Line::from("All files and includes were processed successfully."),
         ])
-        .block(Block::default().borders(Borders::ALL).title("Error Summary"))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Error Summary"),
+        )
         .wrap(Wrap { trim: true });
         f.render_widget(no_errors, area);
         return;
@@ -40,8 +45,16 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            if file_errors.is_empty() { Constraint::Length(0) } else { Constraint::Percentage(50) },
-            if include_errors.is_empty() { Constraint::Length(0) } else { Constraint::Percentage(50) },
+            if file_errors.is_empty() {
+                Constraint::Length(0)
+            } else {
+                Constraint::Percentage(50)
+            },
+            if include_errors.is_empty() {
+                Constraint::Length(0)
+            } else {
+                Constraint::Percentage(50)
+            },
         ])
         .split(area);
 
@@ -60,7 +73,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 Span::styled("✗ ", Style::default().fg(Color::Red)),
                 Span::styled(&error.file_path, Style::default().fg(Color::Magenta).bold()),
             ]));
-            
+
             if let Some(error_msg) = &error.error_message {
                 error_lines.push(Line::from(vec![
                     Span::raw("  → "),
@@ -73,7 +86,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         let file_errors_widget = Paragraph::new(error_lines)
             .block(Block::default().borders(Borders::ALL).title("File Errors"))
             .wrap(Wrap { trim: true });
-        
+
         f.render_widget(file_errors_widget, chunks[0]);
     }
 
@@ -92,7 +105,7 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 Span::styled("✗ ", Style::default().fg(Color::Red)),
                 Span::styled(&error.path, Style::default().fg(Color::Magenta).bold()),
             ]));
-            
+
             if let Some(error_msg) = &error.error_message {
                 error_lines.push(Line::from(vec![
                     Span::raw("  → "),
@@ -103,9 +116,13 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         }
 
         let include_errors_widget = Paragraph::new(error_lines)
-            .block(Block::default().borders(Borders::ALL).title("Include Errors"))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Include Errors"),
+            )
             .wrap(Wrap { trim: true });
-        
+
         let chunk_idx = if file_errors.is_empty() { 0 } else { 1 };
         f.render_widget(include_errors_widget, chunks[chunk_idx]);
     }

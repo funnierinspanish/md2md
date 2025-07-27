@@ -1,12 +1,9 @@
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 use std::panic;
 
@@ -41,14 +38,11 @@ impl Tui {
             original_hook(panic_info);
         }));
 
-        enable_raw_mode()
-            .expect("Failed to enable raw mode");
+        enable_raw_mode().expect("Failed to enable raw mode");
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)
             .expect("Failed to enter alternate screen");
-        self.terminal.hide_cursor()
-            .expect("Failed to hide cursor");
-        self.terminal.clear()
-            .expect("Failed to clear terminal");
+        self.terminal.hide_cursor().expect("Failed to hide cursor");
+        self.terminal.clear().expect("Failed to clear terminal");
         Ok(())
     }
 
@@ -60,7 +54,8 @@ impl Tui {
     where
         F: FnOnce(&mut ratatui::Frame),
     {
-        self.terminal.draw(render_fn)
+        self.terminal
+            .draw(render_fn)
             .expect("Failed to draw terminal frame");
         Ok(())
     }
@@ -70,8 +65,7 @@ impl Tui {
     /// This function is also used for the panic hook to revert
     /// the terminal properties if unexpected errors occur.
     pub fn reset() -> Result<(), Box<dyn std::error::Error>> {
-        disable_raw_mode()
-            .expect("Failed to disable raw mode");
+        disable_raw_mode().expect("Failed to disable raw mode");
         execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)
             .expect("Failed to leave alternate screen");
         Ok(())
@@ -81,10 +75,8 @@ impl Tui {
     ///
     /// It disables the raw mode and reverts back the terminal properties.
     pub fn exit(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        Self::reset()
-            .expect("Failed to reset terminal");
-        self.terminal.show_cursor()
-            .expect("Failed to show cursor");
+        Self::reset().expect("Failed to reset terminal");
+        self.terminal.show_cursor().expect("Failed to show cursor");
         Ok(())
     }
 }
