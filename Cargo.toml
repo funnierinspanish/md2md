@@ -1,7 +1,7 @@
 [package]
 name = "md2md"
-description = "A Markdown to Markdown processor with include directives and batch processing. Similar to markedpp but with enhanced path resolution."
-version = "0.3.0"
+description = "A Markdown to Markdown processor that supports include directives and code snippet inclusion for reusable content composition... A templating system for Markdown that outputs to Markdown."
+version = "0.3.2"
 edition = "2024"
 authors = ["Diego Coy (https://github.com/funnierinspanish)"]
 repository = "https://github.com/funnierinspanish/md2md"
@@ -16,3 +16,9 @@ atty = "0.2"
 
 [dev-dependencies]
 tempfile = "3.10"
+
+[profile.release]
+strip=true
+opt-level = "s"
+lto = true
+codegen-units = 1
