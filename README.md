@@ -16,7 +16,7 @@ md2md allows you to compose documents from reusable markdown partials and code s
 
 - **Include directives** - Compose documents from reusable partials
 - **Code snippet inclusion** - Include code files with syntax highlighting
-- **Batch processing** - Process entire directories at once  
+- **Batch processing** - Process entire directories at once
 - **Interactive TUI** - Beautiful terminal interface for monitoring progress
 - **CI/automation mode** - Non-interactive processing for pipelines
 - **Force mode** - Automatic overwrite and directory creation
@@ -32,7 +32,13 @@ md2md allows you to compose documents from reusable markdown partials and code s
 
 ### Installation
 
-#### Option 1: Download Pre-built Binaries (Recommended)
+#### Option 1: Install from Cargo
+
+```bash
+cargo install --git https://github.com/funnierinspanish/md2md.git
+```
+
+#### Option 2: Download Pre-built Binaries
 
 Download the latest release for your platform from the [GitHub releases page](https://github.com/funnierinspanish/md2md/releases):
 
@@ -85,12 +91,6 @@ sudo mv md2md-aarch64-apple-darwin /usr/local/bin/md2md
 1. Download `md2md-x86_64-pc-windows-msvc.zip` from the [releases page](https://github.com/funnierinspanish/md2md/releases)
 2. Extract the ZIP file
 3. Move `md2md.exe` to a directory in your PATH
-
-#### Option 2: Install from Cargo
-
-```bash
-cargo install --git https://github.com/funnierinspanish/md2md.git
-```
 
 #### Option 3: Build from Source
 
@@ -250,7 +250,7 @@ fn main() {
     let x = 42;
     let y = x * 2;
     println!("Result: {}", y);
-    
+
     if x > 0 {
         println!("x is positive");
     }
@@ -296,7 +296,7 @@ md2md enforces consistent input/output types:
 # ✅ Valid: File → File
 md2md input.md -p partials -o output.md
 
-# ✅ Valid: Directory → Directory  
+# ✅ Valid: Directory → Directory
 md2md src-docs -p partials -o output-docs --batch
 
 # ✅ Valid: Directory → Directory (explicit)
@@ -317,7 +317,7 @@ See the `examples/` directory for demonstrations of md2md features:
 # Process include examples
 md2md examples/source-documents/demo.md -p examples/partials -o output/demo.md
 
-# Process code snippet examples  
+# Process code snippet examples
 md2md examples/source-documents/codesnippet-demo.md -p examples/partials -o output/codesnippet-demo.md
 
 # Process mixed directives
@@ -332,7 +332,7 @@ md2md examples/source-documents -p examples/partials -o output-docs --batch
 md2md processes files through these steps:
 
 1. **Parse** input files for include and codesnippet directives
-2. **Resolve** partial and code file paths according to resolution rules  
+2. **Resolve** partial and code file paths according to resolution rules
 3. **Include** partial content and code snippets recursively (supports nested includes)
 4. **Process** variable substitution in partials
 5. **Write** processed output to destination

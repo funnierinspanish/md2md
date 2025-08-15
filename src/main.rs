@@ -44,7 +44,7 @@ EXAMPLES:
   md2md src-dir -p partials --batch --verbose
 "
 )]
-struct Cli {
+struct CLI {
     /// The source file or directory to be processed
     #[arg()]
     input_path: String,
@@ -83,7 +83,7 @@ struct Cli {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
+    let cli = CLI::parse();
 
     let source_path = Path::new(&cli.input_path);
     let partials_path = Path::new(&cli.partials);
