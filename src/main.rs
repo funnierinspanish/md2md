@@ -44,7 +44,7 @@ EXAMPLES:
   md2md src-dir -p partials --batch --verbose
 "
 )]
-struct CLI {
+struct Cli {
     /// The source file or directory to be processed
     #[arg()]
     input_path: String,
@@ -83,7 +83,7 @@ struct CLI {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = CLI::parse();
+    let cli = Cli::parse();
 
     let source_path = Path::new(&cli.input_path);
     let partials_path = Path::new(&cli.partials);
@@ -643,10 +643,10 @@ fn run_console_mode(
             .lock()
             .expect("Failed to acquire summary lock for console mode processing"),
         |summary| {
-            if config.verbose {
-                if let Some(current) = &summary.current_file {
-                    println!("Processing: {current}");
-                }
+            if config.verbose
+                && let Some(current) = &summary.current_file
+            {
+                println!("Processing: {current}");
             }
         },
     )

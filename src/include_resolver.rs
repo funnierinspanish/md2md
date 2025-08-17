@@ -254,60 +254,60 @@ pub fn parse_include_parameters(
         let params_content = params_str.as_str();
 
         // Parse title parameter
-        if let Ok(title_regex) = Regex::new(r#"title\s*=\s*"([^"]+)""#) {
-            if let Some(title_capture) = title_regex.captures(params_content) {
-                params.title = Some(
-                    title_capture
-                        .get(1)
-                        .expect("Failed to get title from include parameters")
-                        .as_str()
-                        .to_string(),
-                );
-            }
+        if let Ok(title_regex) = Regex::new(r#"title\s*=\s*"([^"]+)""#)
+            && let Some(title_capture) = title_regex.captures(params_content)
+        {
+            params.title = Some(
+                title_capture
+                    .get(1)
+                    .expect("Failed to get title from include parameters")
+                    .as_str()
+                    .to_string(),
+            );
         }
 
         // Parse title-level parameter
-        if let Ok(level_regex) = Regex::new(r"title-level\s*=\s*(\d+)") {
-            if let Some(level_capture) = level_regex.captures(params_content) {
-                let level = level_capture
-                    .get(1)
-                    .expect("Failed to get title-level from include parameters")
-                    .as_str()
-                    .parse::<u8>()
-                    .expect("Failed to parse title-level");
-                if (1..=6).contains(&level) {
-                    params.title_level = Some(level);
-                } else {
-                    return Err("title-level must be between 1 and 6".into());
-                }
+        if let Ok(level_regex) = Regex::new(r"title-level\s*=\s*(\d+)")
+            && let Some(level_capture) = level_regex.captures(params_content)
+        {
+            let level = level_capture
+                .get(1)
+                .expect("Failed to get title-level from include parameters")
+                .as_str()
+                .parse::<u8>()
+                .expect("Failed to parse title-level");
+            if (1..=6).contains(&level) {
+                params.title_level = Some(level);
+            } else {
+                return Err("title-level must be between 1 and 6".into());
             }
         }
 
         // Parse values parameter - now using square brackets instead of parentheses
-        if let Ok(values_regex) = Regex::new(r"values\s*=\s*\[([^\]]+)\]") {
-            if let Some(values_capture) = values_regex.captures(params_content) {
-                let values_str = values_capture
+        if let Ok(values_regex) = Regex::new(r"values\s*=\s*\[([^\]]+)\]")
+            && let Some(values_capture) = values_regex.captures(params_content)
+        {
+            let values_str = values_capture
+                .get(1)
+                .expect("Failed to get values string from include parameters")
+                .as_str();
+
+            // Parse individual key="value" pairs
+            let pair_regex = Regex::new(r#"(\w+)\s*=\s*"([^"]+)""#)
+                .expect("Failed to compile values pair regex");
+
+            for pair_capture in pair_regex.captures_iter(values_str) {
+                let key = pair_capture
                     .get(1)
-                    .expect("Failed to get values string from include parameters")
-                    .as_str();
-
-                // Parse individual key="value" pairs
-                let pair_regex = Regex::new(r#"(\w+)\s*=\s*"([^"]+)""#)
-                    .expect("Failed to compile values pair regex");
-
-                for pair_capture in pair_regex.captures_iter(values_str) {
-                    let key = pair_capture
-                        .get(1)
-                        .expect("Failed to get key from values")
-                        .as_str()
-                        .to_string();
-                    let value = pair_capture
-                        .get(2)
-                        .expect("Failed to get value from values")
-                        .as_str()
-                        .to_string();
-                    params.values.insert(key, value);
-                }
+                    .expect("Failed to get key from values")
+                    .as_str()
+                    .to_string();
+                let value = pair_capture
+                    .get(2)
+                    .expect("Failed to get value from values")
+                    .as_str()
+                    .to_string();
+                params.values.insert(key, value);
             }
         }
     }
@@ -344,33 +344,33 @@ pub fn parse_codesnippet_parameters(
         let params_content = params_str.as_str();
 
         // Parse lang parameter
-        if let Ok(lang_regex) = Regex::new(r#"lang\s*=\s*"([^"]+)""#) {
-            if let Some(lang_capture) = lang_regex.captures(params_content) {
-                params.lang = Some(lang_capture.get(1).unwrap().as_str().to_string());
-            }
+        if let Ok(lang_regex) = Regex::new(r#"lang\s*=\s*"([^"]+)""#)
+            && let Some(lang_capture) = lang_regex.captures(params_content)
+        {
+            params.lang = Some(lang_capture.get(1).unwrap().as_str().to_string());
         }
 
         // Parse start parameter
-        if let Ok(start_regex) = Regex::new(r"start\s*=\s*(\d+)") {
-            if let Some(start_capture) = start_regex.captures(params_content) {
-                let start = start_capture.get(1).unwrap().as_str().parse::<usize>()?;
-                if start > 0 {
-                    params.start = Some(start);
-                } else {
-                    return Err("start line must be greater than 0".into());
-                }
+        if let Ok(start_regex) = Regex::new(r"start\s*=\s*(\d+)")
+            && let Some(start_capture) = start_regex.captures(params_content)
+        {
+            let start = start_capture.get(1).unwrap().as_str().parse::<usize>()?;
+            if start > 0 {
+                params.start = Some(start);
+            } else {
+                return Err("start line must be greater than 0".into());
             }
         }
 
         // Parse end parameter
-        if let Ok(end_regex) = Regex::new(r"end\s*=\s*(\d+)") {
-            if let Some(end_capture) = end_regex.captures(params_content) {
-                let end = end_capture.get(1).unwrap().as_str().parse::<usize>()?;
-                if end > 0 {
-                    params.end = Some(end);
-                } else {
-                    return Err("end line must be greater than 0".into());
-                }
+        if let Ok(end_regex) = Regex::new(r"end\s*=\s*(\d+)")
+            && let Some(end_capture) = end_regex.captures(params_content)
+        {
+            let end = end_capture.get(1).unwrap().as_str().parse::<usize>()?;
+            if end > 0 {
+                params.end = Some(end);
+            } else {
+                return Err("end line must be greater than 0".into());
             }
         }
     }

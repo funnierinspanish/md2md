@@ -28,10 +28,10 @@ impl EventHandler {
                 if event::poll(timeout).expect("no events available") {
                     match event::read().expect("unable to read event") {
                         CrosstermEvent::Key(key) => {
-                            if let Some(action) = handle_key_event(key) {
-                                if _sender.send(action).is_err() {
-                                    return;
-                                }
+                            if let Some(action) = handle_key_event(key)
+                                && _sender.send(action).is_err()
+                            {
+                                return;
                             }
                         }
                         CrosstermEvent::Resize(w, h) => {

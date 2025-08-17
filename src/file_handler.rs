@@ -38,10 +38,10 @@ fn collect_files_recursive(
 }
 
 pub fn ensure_output_directory(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(parent) = path.parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent).expect("Failed to create output directory");
-        }
+    if let Some(parent) = path.parent()
+        && !parent.exists()
+    {
+        fs::create_dir_all(parent).expect("Failed to create output directory");
     }
     Ok(())
 }
